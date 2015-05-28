@@ -1,89 +1,28 @@
 #include <windows.h>
-#include <windowsx.h>
 
-#include <ddraw.h>
-#include <dsound.h>
+#include "CWindow.h"
 
-#include "dsutil.h"
-#include "ddutil.h"
+#include "GameState.h"
 
-HWND MainHwnd;
-LPDIRECTDRAW         DirectOBJ;
 
 /************************************************************************/
-/* Variables                                                            */
+/* Declaration                                                          */
 /************************************************************************/
-// Window size
-const int window_width = 800;
-const int window_height = 600;
-
-// Screen
-LPDIRECTDRAWSURFACE  RealScreen;
-LPDIRECTDRAWSURFACE  BackScreen;
-LPDIRECTDRAWCLIPPER	 ClipScreen;
-
-// Image (Global)
-LPDIRECTDRAWSURFACE  BackImage;
-
-// 
-
-BOOL Fail(HWND hwnd, char *Output)
-{
-	ShowWindow(hwnd, SW_HIDE);
-	MessageBox(hwnd, Output, "Game Programming", MB_OK);
-	DestroyWindow(hwnd);
-	return FALSE;
-}
-
-void _ReleaseAll(void)
-{
-	if (DirectOBJ != NULL)
-	{
-
-		if (BackScreen != NULL)
-		{
-			BackScreen->Release();
-			BackScreen = NULL;
-		}
-		if (RealScreen != NULL)
-		{
-			RealScreen->Release();
-			RealScreen = NULL;
-		}
-
-		DirectOBJ->Release();
-		DirectOBJ = NULL;
-	}
-}
+void changeScreen(ScreenState state);
+void changeBackground(ScreenState state);
+char* backgroundFromEnum(ScreenState state);
 
 /************************************************************************/
-/* Game Loop                                                            */
+/* Global Variable                                                      */
 /************************************************************************/
-void _GameProc(int FullScreen)
-{
-	// Clear Back Ground
-	RECT	BackRect = { 0, 0, window_width, window_height };
-	BackScreen->BltFast(0, 0, BackImage, &BackRect, DDBLTFAST_WAIT | DDBLTFAST_SRCCOLORKEY);
-
-	//////////////////////////////
-
-	//////////////////////////////
-
-	if (FullScreen)
-		RealScreen->Flip(NULL, DDFLIP_WAIT);
-	else{
-		RECT WinRect;
-		RECT Rect = { 0, 0, window_width, window_height };
-
-		GetWindowRect(MainHwnd, &WinRect);
-		RealScreen->Blt(&WinRect, BackScreen, &Rect, DDBLT_WAIT, NULL);
-	}
-}
+CWindow window;
+LPDIRECTDRAWSURFACE BackImage;
 
 /************************************************************************/
-/* Message Procedure                                                    */
+/* WndProc                                                              */
 /************************************************************************/
-long FAR PASCAL WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
+LRESULT WndProc(HWND hWnd, LPDIRECTDRAWSURFACE BackScreen, LPDIRECTDRAWSURFACE RealScreen, int winWidth, int winHeight,
+	UINT message, WPARAM wParam, LPARAM lParam)
 {
 	switch (message)
 	{
@@ -92,12 +31,13 @@ long FAR PASCAL WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam
 	case WM_LBUTTONDOWN:
 		break;
 	case WM_DESTROY:
-		_ReleaseAll();
+		window.ReleaseAll();
 		PostQuitMessage(0);
 		break;
 
 	case WM_TIMER:
-		_GameProc(false);
+		//_GameProc(false);
+		window.pGameProc(hWnd, BackScreen, RealScreen, winWidth, winHeight, false);
 		break;
 	case WM_KEYDOWN:
 		switch (wParam)
@@ -126,108 +66,29 @@ long FAR PASCAL WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam
 	return DefWindowProc(hWnd, message, wParam, lParam);
 }
 
+
 /************************************************************************/
-/* Mode Setting                                                         */
+/* GameProc                                                             */
 /************************************************************************/
-BOOL _GameMode(HINSTANCE hInstance, int nCmdShow, DWORD  x, DWORD  y, DWORD  bpp, int FullScreen)
+void GameProc(HWND hWnd, LPDIRECTDRAWSURFACE BackScreen, LPDIRECTDRAWSURFACE RealScreen, int winWidth, int winHeight, bool fullScreen)
 {
-	WNDCLASS wc;
-	DDSURFACEDESC ddsd;
-	DDSCAPS ddscaps;
-	LPDIRECTDRAW pdd;
+	// Clear Back Ground
+	RECT	BackRect = { 0, 0, winWidth, winHeight };
+	BackScreen->BltFast(0, 0, BackImage, &BackRect, DDBLTFAST_WAIT | DDBLTFAST_SRCCOLORKEY);
 
-	wc.style = CS_HREDRAW | CS_VREDRAW | CS_DBLCLKS;
-	wc.lpfnWndProc = WindowProc;
-	wc.cbClsExtra = 0;
-	wc.cbWndExtra = 0;
-	wc.hInstance = hInstance;
-	wc.hIcon = LoadIcon(NULL, IDI_APPLICATION);
-	wc.hCursor = LoadCursor(NULL, IDC_ARROW);
-	wc.hbrBackground = GetStockBrush(BLACK_BRUSH);
-	wc.lpszMenuName = NULL;
-	wc.lpszClassName = "GameProg";
-	RegisterClass(&wc);
+	//////////////////////////////
 
-	if (FullScreen){
-		MainHwnd = CreateWindowEx(
-			0, "GameProg", NULL, WS_POPUP, 0, 0,
-			GetSystemMetrics(SM_CXSCREEN), GetSystemMetrics(SM_CYSCREEN),
-			NULL, NULL, hInstance, NULL);
-	}
+	//////////////////////////////
+
+	if (fullScreen)
+		RealScreen->Flip(NULL, DDFLIP_WAIT);
 	else{
-		MainHwnd = CreateWindow("GameProg", "WindowMode",
-			WS_OVERLAPPEDWINDOW, 0, 0, x, y, NULL, NULL, hInstance, NULL);
+		RECT WinRect;
+		RECT Rect = { 0, 0, winWidth, winHeight };
+
+		GetWindowRect(hWnd, &WinRect);
+		RealScreen->Blt(&WinRect, BackScreen, &Rect, DDBLT_WAIT, NULL);
 	}
-	if (!MainHwnd) return FALSE;
-
-
-	// 다이렉트 드로우(DD) 생성
-	if (FAILED(DirectDrawCreate(NULL, &pdd, NULL)))
-		return Fail(MainHwnd, "DirectDrawCreate");
-	// DD에 연결
-	if (FAILED(pdd->QueryInterface(IID_IDirectDraw, (LPVOID *)&DirectOBJ)))
-		return Fail(MainHwnd, "QueryInterface");
-
-	// 윈도우 핸들의 협력 단계를 설정한다.
-	if (FullScreen){
-		if (FAILED(DirectOBJ->SetCooperativeLevel(MainHwnd, DDSCL_EXCLUSIVE | DDSCL_FULLSCREEN)))
-			return Fail(MainHwnd, "SetCooperativeLevel");
-		// Set full screen display mode
-		if (FAILED(DirectOBJ->SetDisplayMode(x, y, bpp)))
-			return Fail(MainHwnd, "SetDisplayMode");
-
-		memset(&ddsd, 0, sizeof(ddsd));
-		ddsd.dwSize = sizeof(ddsd);
-		ddsd.dwFlags = DDSD_CAPS | DDSD_BACKBUFFERCOUNT;
-		ddsd.ddsCaps.dwCaps = DDSCAPS_PRIMARYSURFACE | DDSCAPS_FLIP | DDSCAPS_COMPLEX;
-		ddsd.dwBackBufferCount = 1;
-		if (FAILED(DirectOBJ->CreateSurface(&ddsd, &RealScreen, NULL)))
-			return Fail(MainHwnd, "CreateSurface");
-
-		memset(&ddscaps, 0, sizeof(ddscaps));
-		ddscaps.dwCaps = DDSCAPS_BACKBUFFER;
-		if (FAILED(RealScreen->GetAttachedSurface(&ddscaps, &BackScreen)))
-			return Fail(MainHwnd, "GetAttachedSurface");
-	}
-	else{
-		if (FAILED(DirectOBJ->SetCooperativeLevel(MainHwnd, DDSCL_NORMAL)))
-			return Fail(MainHwnd, "SetCooperativeLevel");
-
-		memset(&ddsd, 0, sizeof(ddsd));
-		ddsd.dwSize = sizeof(ddsd);
-		ddsd.dwFlags = DDSD_CAPS;
-		ddsd.ddsCaps.dwCaps = DDSCAPS_PRIMARYSURFACE;
-		ddsd.dwBackBufferCount = 0;
-		if (FAILED(DirectOBJ->CreateSurface(&ddsd, &RealScreen, NULL)))
-			return Fail(MainHwnd, "CreateSurface");
-
-		memset(&ddsd, 0, sizeof(ddsd));
-		ddsd.dwSize = sizeof(ddsd);
-		ddsd.dwFlags = DDSD_CAPS | DDSD_HEIGHT | DDSD_WIDTH;
-		ddsd.ddsCaps.dwCaps = DDSCAPS_OFFSCREENPLAIN;
-		ddsd.dwWidth = x;
-		ddsd.dwHeight = y;
-		if (FAILED(DirectOBJ->CreateSurface(&ddsd, &BackScreen, NULL)))
-			return Fail(MainHwnd, "CreateSurface");
-
-		if (FAILED(DirectOBJ->CreateClipper(0, &ClipScreen, NULL)))
-			return Fail(MainHwnd, "CreateClipper");
-
-		if (FAILED(ClipScreen->SetHWnd(0, MainHwnd)))
-			return Fail(MainHwnd, "SetHWnd");
-
-		if (FAILED(RealScreen->SetClipper(ClipScreen)))
-			return Fail(MainHwnd, "SetClipper");
-
-		SetWindowPos(MainHwnd, NULL, 0, 0, x, y, SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE);
-	}
-
-	SetFocus(MainHwnd);
-	ShowWindow(MainHwnd, nCmdShow);
-	UpdateWindow(MainHwnd);
-	ShowCursor(TRUE);
-
-	return TRUE;
 }
 
 /************************************************************************/
@@ -235,24 +96,61 @@ BOOL _GameMode(HINSTANCE hInstance, int nCmdShow, DWORD  x, DWORD  y, DWORD  bpp
 /************************************************************************/
 int __stdcall WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _In_ LPSTR lpCmdLine, _In_ int nCmdShow)
 {
-	MSG msg;
+	// Window Initialization
+	window.SetGameProc(GameProc);
+	window.SetWndProc(WndProc);
+	window.Init(hInstance, hPrevInstance, lpCmdLine, nCmdShow);
 
-	if (!_GameMode(hInstance, nCmdShow, window_width, window_height, 32, 0)) return FALSE;
+	// [Game] ////////////////////////////////////////////////////////////////
 
-	// Background Image
-	BackImage = DDLoadBitmap(DirectOBJ, "back.BMP", 0, 0);
+	current.screen = ScreenState::GAME;
+
+	BackImage = DDLoadBitmap(window.DirectOBJ, backgroundFromEnum(ScreenState::START), 0, 0);
 	DDSetColorKey(BackImage, RGB(0, 0, 0));
 
-	// Set tick frequency (20ms per frame = 50 fps)
-	SetTimer(MainHwnd, 1, 20, NULL);
+	//////////////////////////////////////////////////////////////////////////
 
-	// Loop Message
-	while (GetMessage(&msg, NULL, 0, 0)){
-		TranslateMessage(&msg);
-		DispatchMessage(&msg);
-	}
-
-	DestroyWindow(MainHwnd);
+	// Loop Start
+	window.MainLoop();
 
 	return TRUE;
+}
+
+/************************************************************************/
+/* Implementation                                                       */
+/************************************************************************/
+void changeScreen(ScreenState state)
+{
+	if (current.screen == state) {
+		// do nothing
+	}
+	else {
+		current.screen = state;
+		changeBackground(current.screen);
+	}
+}
+
+void changeBackground(ScreenState state)
+{
+	BackImage = DDLoadBitmap(window.DirectOBJ, backgroundFromEnum(state), 0, 0);
+	DDSetColorKey(BackImage, RGB(0, 0, 0));
+}
+
+char* backgroundFromEnum(ScreenState state)
+{
+	switch (state)
+	{
+	case MENU:
+		return "menu.bmp";
+		break;
+	case NETWORK:
+		return "network.bmp";
+		break;
+	case GAME:
+		return "game.bmp";
+		break;
+	default:
+		return "back.bmp";
+		break;
+	}
 }

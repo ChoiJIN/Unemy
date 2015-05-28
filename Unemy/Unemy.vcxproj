@@ -79,11 +79,17 @@
   <ItemGroup>
     <ClCompile Include="DDUTIL.CPP" />
     <ClCompile Include="DSUTIL.CPP" />
+    <ClCompile Include="CWindow.cpp" />
     <ClCompile Include="Main.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="DDUTIL.H" />
     <ClInclude Include="DSUTIL.H" />
+    <ClInclude Include="CWindow.h" />
+    <ClInclude Include="GameState.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="WndProc.txt" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

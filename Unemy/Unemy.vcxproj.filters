@@ -24,6 +24,9 @@
     <ClCompile Include="DSUTIL.CPP">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="CWindow.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="DSUTIL.H">
@@ -32,5 +35,14 @@
     <ClInclude Include="DDUTIL.H">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="CWindow.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GameState.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="WndProc.txt" />
   </ItemGroup>
 </Project>
