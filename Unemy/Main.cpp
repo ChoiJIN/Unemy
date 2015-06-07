@@ -1,3 +1,11 @@
+// BOOST
+#include <boost/thread/thread.hpp>
+
+// Network
+#include "chat_client.hpp"
+#include "chat_message.hpp"
+
+// Standard
 #include <windows.h>
 #include <vector>
 #include <string>
@@ -5,6 +13,8 @@
 #include "CWindow.h"
 
 #include "GameState.h"
+#include "Controller.h"
+
 
 using namespace std;
 
@@ -16,10 +26,19 @@ void changeScreen(Screen state);		// Screen 전환 함수
 void changeBackground(Screen state);	// Background 전환 함수
 char* backgroundFromEnum(Screen state);	// Enum으로부터 Background의 파일 경로를 받아옴.
 
+// Physics
+void calculation();
+void collisionDetection();
+
 /************************************************************************/
 /* Global Variable                                                      */
 /************************************************************************/
+double my_time = 0;
+
 CWindow window;
+Current current;
+Controller controller;
+
 LPDIRECTDRAWSURFACE BackImage;
 struct Color {
 	int r, g, b;
@@ -35,6 +54,33 @@ vector<LPDIRECTDRAWSURFACE> unitImages;
 /************************************************************************/
 /* WndProc                                                              */
 /************************************************************************/
+// Toggle arrow key
+bool tup, tdown, tleft, tright;
+double lr_push, td_push;
+double DELTA_PUSH = 0.02;
+
+chat_client* c;
+const size_t DATA_LENGTH = 10;
+
+void send_position(int x, int y)
+{
+	using namespace std; // For strlen and memcpy.
+	chat_message msg;
+	sprintf(msg.body(), "%d %d", x, y);
+	msg.body_length(strlen(msg.body()));
+
+	//memcpy(msg.body(), line, msg.body_length());
+	msg.encode_header();
+	c->write(msg);
+}
+
+void receive_position()
+{
+	//chat_message msg = c->get_message();
+
+
+}
+
 LRESULT WndProc(HWND hWnd, LPDIRECTDRAWSURFACE BackScreen, LPDIRECTDRAWSURFACE RealScreen, int winWidth, int winHeight,
 	UINT message, WPARAM wParam, LPARAM lParam)
 {
@@ -51,7 +97,22 @@ LRESULT WndProc(HWND hWnd, LPDIRECTDRAWSURFACE BackScreen, LPDIRECTDRAWSURFACE R
 		break;
 
 	case WM_TIMER:
-		//_GameProc(false);
+		if (tleft)
+			controller.push(Controller::LEFT, lr_push += DELTA_PUSH);
+		else if (tright)
+			controller.push(Controller::RIGHT, lr_push += DELTA_PUSH);
+
+		if (tup)
+			controller.push(Controller::UP, td_push += DELTA_PUSH);
+		else if (tdown)
+			controller.push(Controller::DOWN, td_push += DELTA_PUSH);
+
+		// Physics
+		calculation();
+		collisionDetection();
+
+		send_position(current.me.x, current.me.y);
+
 		window.pGameProc(hWnd, BackScreen, RealScreen, winWidth, winHeight, false);
 		break;
 	case WM_KEYDOWN:
@@ -62,16 +123,16 @@ LRESULT WndProc(HWND hWnd, LPDIRECTDRAWSURFACE BackScreen, LPDIRECTDRAWSURFACE R
 			PostMessage(hWnd, WM_CLOSE, 0, 0);
 			return 0;
 		case VK_LEFT:
-			current.me.x -= 10;
+			tleft = true;
 			return 0;
 		case VK_RIGHT:
-			current.me.x += 10;
+			tright = true;
 			return 0;
 		case VK_UP:
-			current.me.y -= 10;
+			tup = true;
 			return 0;
 		case VK_DOWN:
-			current.me.y += 10;
+			tdown = true;
 			return 0;
 		case VK_SPACE:
 			break;
@@ -79,7 +140,28 @@ LRESULT WndProc(HWND hWnd, LPDIRECTDRAWSURFACE BackScreen, LPDIRECTDRAWSURFACE R
 			break;
 		}
 		break;
+	case WM_KEYUP:
+		switch (wParam)
+		{
+		case VK_LEFT:
+			tleft = false;
+			lr_push = 0;
+			return 0;
+		case VK_RIGHT:
+			tright = false;
+			lr_push = 0;
+			return 0;
+		case VK_UP:
+			tup = false;
+			td_push = 0;
+			return 0;
+		case VK_DOWN:
+			tdown = false;
+			td_push = 0;
+			return 0;
+		}
 
+		break;
 	}
 
 	return DefWindowProc(hWnd, message, wParam, lParam);
@@ -89,7 +171,7 @@ LRESULT WndProc(HWND hWnd, LPDIRECTDRAWSURFACE BackScreen, LPDIRECTDRAWSURFACE R
 /************************************************************************/
 /* GameProc                                                             */
 /************************************************************************/
-void GameProc(HWND hWnd, LPDIRECTDRAWSURFACE BackScreen, LPDIRECTDRAWSURFACE RealScreen, int winWidth, int winHeight, 
+void GameProc(HWND hWnd, LPDIRECTDRAWSURFACE BackScreen, LPDIRECTDRAWSURFACE RealScreen, int winWidth, int winHeight,
 	bool fullScreen)
 {
 	// Clear Back Ground
@@ -101,6 +183,22 @@ void GameProc(HWND hWnd, LPDIRECTDRAWSURFACE BackScreen, LPDIRECTDRAWSURFACE Rea
 	// Draw me
 	RECT meRect = { 0, 0, 16, 16 };
 	BackScreen->BltFast(current.me.x, current.me.y, unitImages[3], &meRect, DDBLTFAST_WAIT | DDBLTFAST_SRCCOLORKEY);
+
+	HDC hdc;
+	BackScreen->GetDC(&hdc);
+	string str = "pos: (";
+	str += to_string(current.me.x);
+	str += ", ";
+	str += to_string(current.me.y);
+	str += ")";
+	TextOut(hdc, 50, 50, str.c_str(), str.size());
+	str = "velocity: (";
+	str += to_string(current.me.vx);
+	str += ", ";
+	str += to_string(current.me.vy);
+	str += ")";
+	TextOut(hdc, 50, 70, str.c_str(), str.size());
+	BackScreen->ReleaseDC(hdc);
 
 	//////////////////////////////////////////////////////////////////////////
 
@@ -120,24 +218,71 @@ void GameProc(HWND hWnd, LPDIRECTDRAWSURFACE BackScreen, LPDIRECTDRAWSURFACE Rea
 /************************************************************************/
 int __stdcall WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _In_ LPSTR lpCmdLine, _In_ int nCmdShow)
 {
-	// Window Initialization
-	window.SetGameProc(GameProc);
-	window.SetWndProc(WndProc);
-	window.Init(hInstance, hPrevInstance, lpCmdLine, nCmdShow);
+	try
+	{
+		//////////////////////////////////////////////////////////////////////////
+		// Network SETTING
+		//////////////////////////////////////////////////////////////////////////
+		const char ip[] = "127.0.0.1";
+		const char port[] = "5166";
 
-	loadImages();
+		boost::asio::io_service io_service;
 
-	// [Game] ////////////////////////////////////////////////////////////////
+		tcp::resolver resolver(io_service);
+		tcp::resolver::query query(ip, port);
+		tcp::resolver::iterator iterator = resolver.resolve(query);
 
-	BackImage = backgroundImages[0];
-	changeScreen(Screen::START);
-	
-	current.me.size = 1;
+		c = new chat_client(io_service, iterator);
 
-	//////////////////////////////////////////////////////////////////////////
+		boost::thread t(boost::bind(&boost::asio::io_service::run, &io_service));
 
-	// Loop Start
-	window.MainLoop();
+
+		//////////////////////////////////////////////////////////////////////////
+		// DirectDraw SETTING
+		//////////////////////////////////////////////////////////////////////////
+		// Window Initialization
+		window.SetGameProc(GameProc);
+		window.SetWndProc(WndProc);
+		window.Init(hInstance, hPrevInstance, lpCmdLine, nCmdShow);
+
+		loadImages();
+
+		controller.setCurrent(&current);
+
+		//////////////////////////////////////////////////////////////////////////
+		// Game SETTING
+		//////////////////////////////////////////////////////////////////////////
+		BackImage = backgroundImages[0];
+		changeScreen(Screen::MENU);
+
+		current.me.size = 10;
+		current.me.x = 100;
+		current.me.y = 100;
+
+
+		//////////////////////////////////////////////////////////////////////////
+		// Loop Start
+		//////////////////////////////////////////////////////////////////////////
+		window.MainLoop();
+
+// 		char line[chat_message::max_body_length + 1];
+// 		while (std::cin.getline(line, chat_message::max_body_length + 1))
+// 		{
+// 			using namespace std; // For strlen and memcpy.
+// 			chat_message msg;
+// 			msg.body_length(strlen(line));
+// 			memcpy(msg.body(), line, msg.body_length());
+// 			msg.encode_header();
+// 			c.write(msg);
+// 		}
+
+		c->close();
+		t.join();
+	}
+	catch (std::exception& e)
+	{
+		std::cerr << "Exception: " << e.what() << "\n";
+	}
 
 	return TRUE;
 }
@@ -158,8 +303,8 @@ void changeScreen(Screen state)
 
 void changeBackground(Screen state)
 {
-// 	BackImage = DDLoadBitmap(window.DirectOBJ, backgroundFromEnum(state), 0, 0);
-// 	DDSetColorKey(BackImage, RGB(0, 0, 0));
+	// 	BackImage = DDLoadBitmap(window.DirectOBJ, backgroundFromEnum(state), 0, 0);
+	// 	DDSetColorKey(BackImage, RGB(0, 0, 0));
 
 	BackImage = backgroundImages[state];
 }
@@ -220,5 +365,60 @@ void loadImages()
 			DDSetColorKey(temp, RGB(colorKey.r, colorKey.g, colorKey.b));
 			unitImages.push_back(temp);
 		}
+	}
+}
+
+void calculation()
+{
+	my_time += DELTA_TIME;
+
+	// 마찰력 연산
+	if (current.me.vx != 0) {
+		if (abs(current.me.vx) < abs(GRAVITY_COEF*DRAG_COEF*(abs(current.me.vx) / current.me.vx) * current.me.size))
+			current.me.vx = 0;
+		else
+			current.me.vx -= GRAVITY_COEF*DRAG_COEF*(abs(current.me.vx) / current.me.vx) * current.me.size;
+	}
+
+	if (current.me.vy != 0) {
+		if (abs(current.me.vy) < abs(GRAVITY_COEF*DRAG_COEF*(abs(current.me.vy) / current.me.vy) * current.me.size))
+			current.me.vy = 0;
+		else
+			current.me.vy -= GRAVITY_COEF*DRAG_COEF*(abs(current.me.vy) / current.me.vy) * current.me.size;
+	}
+
+	int maxVelocity = (SIZE_NUMBER * 10 / current.me.size) * MAX_VELOCITY;
+	if (abs(current.me.vx) > maxVelocity)
+		current.me.vx = maxVelocity * (abs(current.me.vx) / current.me.vx);
+
+	if (abs(current.me.vy) > maxVelocity)
+		current.me.vy = maxVelocity * (abs(current.me.vy) / current.me.vy);
+
+	// 속도로 위치 연산
+	current.me.x += (int)(current.me.vx*DELTA_TIME);
+	current.me.y += (int)(current.me.vy*DELTA_TIME);
+
+}
+
+int win_offset = 30;
+void collisionDetection()
+{
+	int offset = current.me.size + win_offset;
+	if (current.me.x > window.WIN_WIDTH - offset) {
+		current.me.x = window.WIN_WIDTH - offset;
+		current.me.vx = 0;
+	}
+	else if (current.me.x < offset) {
+		current.me.x = offset;
+		current.me.vx = 0;
+	}
+
+	if (current.me.y > window.WIN_HEIGHT - offset) {
+		current.me.y = window.WIN_HEIGHT - offset;
+		current.me.vy = 0;
+	}
+	else if (current.me.y < offset) {
+		current.me.y = offset;
+		current.me.vy = 0;
 	}
 }

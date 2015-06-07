@@ -155,10 +155,10 @@ void CWindow::Init(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _
 {
 	bool result_mode;
 	//if (!) result_mode = false;
-	GameMode(hInstance, nCmdShow, winWidth, winHeight, 32, 0);
+	GameMode(hInstance, nCmdShow, WIN_WIDTH, WIN_HEIGHT, 32, 0);
 
-	// Set tick frequency (20ms per frame = 50 fps)
-	SetTimer(hWnd, 1, 20, NULL);
+	// Set tick frequency (10ms per frame = 100 fps)
+	SetTimer(hWnd, 1, REDNER_TIME, NULL);
 
 	return;
 }
@@ -195,5 +195,5 @@ LRESULT	CALLBACK CWindow::StaticWndProc(HWND hWnd, UINT message, WPARAM wParam, 
 
 LRESULT CWindow::WndProc(UINT message, WPARAM wParam, LPARAM lParam)
 {
-	return pWndProc(hWnd, BackScreen, RealScreen, winWidth, winHeight, message, wParam, lParam);
+	return pWndProc(hWnd, BackScreen, RealScreen, WIN_WIDTH, WIN_HEIGHT, message, wParam, lParam);
 }

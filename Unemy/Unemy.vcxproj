@@ -52,11 +52,13 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>C:\boost_1_58_0;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalDependencies>ddraw.lib;dxguid.lib;dsound.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>C:\boost_1_58_0\stage\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -77,18 +79,23 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Controller.cpp" />
     <ClCompile Include="DDUTIL.CPP" />
     <ClCompile Include="DSUTIL.CPP" />
     <ClCompile Include="CWindow.cpp" />
     <ClCompile Include="Main.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="chat_client.hpp" />
+    <ClInclude Include="chat_message.hpp" />
+    <ClInclude Include="Controller.h" />
     <ClInclude Include="DDUTIL.H" />
     <ClInclude Include="DSUTIL.H" />
     <ClInclude Include="CWindow.h" />
     <ClInclude Include="GameState.h" />
   </ItemGroup>
   <ItemGroup>
+    <Text Include="시스템.txt" />
     <Text Include="WndProc.txt" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

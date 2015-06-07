@@ -1,0 +1,24 @@
+MAX_VELOCITY: 유닛이 가질 수 있는 최대 속도
+
+Controller.push: 유닛의 속도를 변경 시킴
+ = MAX_VELOCITY - Player.size
+
+ DELTA_TIME * vx가 최소 1은 움직일 수 있는 vx를 만들자.
+
+통신할 때 주고받을 정보
+1. current.me
+2. 
+
+반지름 Size: 
+10, 20, 30, 40, 50, 60, 70, 80
+size별 최대속도(pixel per frame): 
+8, 7, 6, 5, 4, 3, 2, 1
+
+
+accelDelta = (PUSH_FORCE / size)
+v = v + accelDelta
+s = s + v * DELTA_TIME;
+
+큰놈이 작은놈을 먹는건데 멀티플레이고 일정 시간이 지나면 점점 작아지는 것
+큰놈은 느리다
+? 크기가 같으면 속도가 빠른놈이 먹는다

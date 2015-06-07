@@ -2,6 +2,8 @@
 #include <windows.h>
 #include <windowsx.h>
 
+#include <mmsystem.h>
+
 #include <ddraw.h>
 #include <dsound.h>
 
@@ -11,6 +13,7 @@
 class CWindow
 {
 public:
+
 	CWindow();
 	~CWindow();
 
@@ -28,13 +31,14 @@ public:
 	void(*pGameProc)(HWND hWnd, LPDIRECTDRAWSURFACE backScreen, LPDIRECTDRAWSURFACE realScreen, int windth, int height, bool fullScreen);
 	LRESULT(*pWndProc)(HWND hWnd, LPDIRECTDRAWSURFACE backScreen, LPDIRECTDRAWSURFACE realScreen, int windth, int height, UINT, WPARAM, LPARAM);
 
+	// Window size
+	static const int WIN_WIDTH = 800;
+	static const int WIN_HEIGHT = 600;
+	static const int REDNER_TIME = 20;	// milliseconds
+
 private:
 	HWND hWnd;
 	MSG msg;
-
-	// Window size
-	const int winWidth = 800;
-	const int winHeight = 600;
 
 	// Screen
 	LPDIRECTDRAWSURFACE  RealScreen;
