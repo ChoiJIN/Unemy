@@ -65,7 +65,14 @@ private:
 		}
 		else
 		{
-			do_close();
+			if (mycount > 3) 
+			{
+				do_close();
+			}
+			if (!read_msg_.decode_header()) {
+				std::cout << "not successed... ";
+				mycount++;
+			}
 		}
 	}
 
@@ -133,7 +140,7 @@ private:
 	chat_message read_msg_;
 	chat_message_queue write_msgs_;
 
-	boost::mutex mtx_;
+	int mycount = 0;
 };
 
 #endif

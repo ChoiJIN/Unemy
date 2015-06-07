@@ -47,10 +47,10 @@
     <ClInclude Include="Controller.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="chat_message.hpp">
+    <ClInclude Include="chat_client.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="chat_client.hpp">
+    <ClInclude Include="chat_message.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

@@ -85,7 +85,7 @@ public:
 		using namespace std; // For sprintf and memcpy.
 		char header[header_length + 1] = "";
 		sprintf(header, "%4d", body_length_);
-		memcpy(data_, header, header_length - id_length);
+		memcpy(data_, header, header_length-id_length);
 	}
 
 	void add_id(int id)
