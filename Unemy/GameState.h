@@ -1,4 +1,5 @@
 #pragma once
+#include <vector>
 
 enum Screen {
 	START, MENU, GAME, NETWORK
@@ -16,12 +17,19 @@ struct Player {
 	PlayerState state;
 };
 
+struct Enemy {
+	int id;
+	int size;
+	int x, y;
+	PlayerState state;
+};
+
 struct Current {
 	Screen screen;
 	
-	int number;			// 나를 제외한 플레이어 수
-	Player *players;	// 네트워크 플레이어
-	Player me;			// 플레이 유저
+	int number;					// 나를 제외한 플레이어 수
+	std::vector<Enemy> players;	// 네트워크 플레이어
+	Player me;					// 플레이 유저
 };
 
 const double GRAVITY_COEF = 9.81;

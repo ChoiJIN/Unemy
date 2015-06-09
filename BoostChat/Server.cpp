@@ -48,16 +48,21 @@ public:
 		participants_.insert(participant);
 	}
 
-	void leave(chat_participant_ptr participant)
+	void leave(chat_participant_ptr participant, int id)
 	{
 		participants_.erase(participant);
 		// 게임을 떠났다는 것을 어떻게 표현할까..?
+		std::cout << id << " 님이 게임을 떠났습니다." << std::endl;
 	}
 
-	void deliver(const chat_message& msg)
+	void deliver(const chat_message& msg, int except_id)
 	{
-		std::for_each(participants_.begin(), participants_.end(),
-			boost::bind(&chat_participant::deliver, _1, boost::ref(msg)));
+		for each (chat_participant_ptr participant in participants_)
+		{
+			if (except_id) continue;
+
+			participant->deliver(boost::ref(msg));
+		}
 	}
 
 	int size()
@@ -127,10 +132,7 @@ public:
 		}
 		else
 		{
-			if (read_msg_.decode_header())
-				std::cout << "success but...";
-			std::cout << error;
-			room_.leave(shared_from_this());
+			room_.leave(shared_from_this(), id_);
 		}
 	}
 
@@ -139,17 +141,9 @@ public:
 		if (!error)
 		{
 			// 앞에 id를 붙여서 다른 클라이언트에게 보낸다.
-// 			char ids[4];
-// 			sprintf(ids, "%d", id_);
-// 			read_msg_.body_length(read_msg_.body_length() + strlen(ids));
-			read_msg_.add_id(3);
-			if (read_msg_.body_length() <= 0)
-				std::cout << "error";
-			else if (read_msg_.body_length() >= chat_message::max_body_length)
-				std::cout << "error";
-			else if (read_msg_.data()[0] == '3')
-				std::cout << "error";
-			room_.deliver(read_msg_);
+			read_msg_.add_id(id_);
+			room_.deliver(read_msg_, id_);
+
 			boost::asio::async_read(socket_,
 				boost::asio::buffer(read_msg_.data(), chat_message::header_length),
 				boost::bind(&chat_session::handle_read_header, shared_from_this(),
@@ -161,7 +155,7 @@ public:
 		}
 		else
 		{
-			room_.leave(shared_from_this());
+			room_.leave(shared_from_this(), id_);
 		}
 	}
 
@@ -181,8 +175,13 @@ public:
 		}
 		else
 		{
-			room_.leave(shared_from_this());
+			room_.leave(shared_from_this(), id_);
 		}
+	}
+
+	int get_id()
+	{
+		return id_;
 	}
 
 private:

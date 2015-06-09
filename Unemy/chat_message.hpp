@@ -70,8 +70,9 @@ public:
 		char header[header_length + 1 - id_length] = "";
 		strncat(header, data_, header_length - id_length);
 		body_length_ = atoi(header);
-		//strncat(header, data_ + header_length - id_length, id_length);
-		//id_ = atoi(header);
+		char ids[id_length + 1] = "";
+		strncat(ids, data_ + header_length - id_length, id_length);
+		id_ = atoi(ids);
 		if (body_length_ > max_body_length)
 		{
 			body_length_ = 0;

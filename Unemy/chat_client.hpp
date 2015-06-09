@@ -3,11 +3,14 @@
 
 #include <iostream>
 #include <deque>
+#include <vector>
+#include <algorithm>
+
 #include <boost/bind.hpp>
 #include <boost/asio.hpp>
 
-#include "chat_message.hpp"
 #include "GameState.h"
+#include "chat_message.hpp"
 
 using boost::asio::ip::tcp;
 
@@ -36,9 +39,9 @@ public:
 		io_service_.post(boost::bind(&chat_client::do_close, this));
 	}
 
-	chat_message get_message()
+	std::vector<Enemy> get_enemies()
 	{
-		return read_msg_;
+		return enemies;
 	}
 
 private:
@@ -54,6 +57,49 @@ private:
 		}
 	}
 
+	bool read_id(int id)
+	{
+			return true;
+	}
+
+
+
+	void read_enemy(int id, const char* body)
+	{
+		using namespace std;
+		char size[5] = "";
+		char x[5] = "";
+		char y[5] = "";
+		int offset = 3;
+
+		auto i = find_if(enemies.begin(), enemies.end(), [id](Enemy e) { return e.id == id; });
+
+		// 새로운 적
+		if (enemies.empty() || i == enemies.end())
+		{
+			Enemy e;
+
+			e.id = id;
+			strncat(size, body, offset);
+			e.size = atoi(size);
+			strncat(x, body + offset, offset);
+			e.x = atoi(x);
+			strncat(y, body + 2 * offset, offset);
+			e.y = atoi(y);
+
+			enemies.push_back(e);
+		}
+		// 존재하는 적
+		else {
+			strncat(size, body, offset);
+			(*i).size = atoi(size);
+			strncat(x, body + offset, offset);
+			(*i).x = atoi(x);
+			strncat(y, body + 2 * offset, offset);
+			(*i).y = atoi(y);
+		}
+	}
+
 	void handle_read_header(const boost::system::error_code& error)
 	{
 		if (!error && read_msg_.decode_header())
@@ -65,7 +111,7 @@ private:
 		}
 		else
 		{
-			if (mycount > 3) 
+			if (mycount > 3)
 			{
 				do_close();
 			}
@@ -80,6 +126,10 @@ private:
 	{
 		if (!error)
 		{
+			//mtx_.lock();
+			read_enemy(read_msg_.get_id(), read_msg_.body());
+			//mtx_.unlock();
+
 			std::cout.write(read_msg_.body(), read_msg_.body_length());
 			std::cout << "\n";
 			boost::asio::async_read(socket_,
@@ -104,6 +154,7 @@ private:
 				boost::asio::buffer(write_msgs_.front().data(),
 				write_msgs_.front().length()),
 				boost::bind(&chat_client::handle_write, this,
+
 				boost::asio::placeholders::error));
 		}
 	}
@@ -139,6 +190,9 @@ private:
 	tcp::socket socket_;
 	chat_message read_msg_;
 	chat_message_queue write_msgs_;
+	std::vector<Enemy> enemies;
+
+	boost::mutex mtx_;
 
 	int mycount = 0;
 };

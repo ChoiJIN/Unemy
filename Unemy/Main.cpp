@@ -15,7 +15,6 @@
 #include "GameState.h"
 #include "Controller.h"
 
-
 using namespace std;
 
 /************************************************************************/
@@ -45,6 +44,8 @@ struct Color {
 };
 Color colorKey = { 0, 0, 0 };	// 현재 컬러키가 먹히지 않음. 무조건 검은색으로..
 
+chat_client* c;
+
 /************************************************************************/
 /* Resources                                                            */
 /************************************************************************/
@@ -59,14 +60,11 @@ bool tup, tdown, tleft, tright;
 double lr_push, td_push;
 double DELTA_PUSH = 0.02;
 
-chat_client* c;
-const size_t DATA_LENGTH = 10;
-
-void send_position(int x, int y)
+void send_me(int size, int x, int y)
 {
 	using namespace std; // For strlen and memcpy.
 	chat_message msg;
-	sprintf(msg.body(), "%d %d", x, y);
+	sprintf(msg.body(), "%03d%03d%03d", size, x, y);
 	msg.body_length(strlen(msg.body()));
 
 	//memcpy(msg.body(), line, msg.body_length());
@@ -77,8 +75,15 @@ void send_position(int x, int y)
 void receive_position()
 {
 	//chat_message msg = c->get_message();
+	current.players.clear();
 
-
+	auto v = c->get_enemies();
+	if (!v.empty())
+		for (int i = 0; i < v.size(); i++)
+		{
+			//current.players.insert(current.players.begin(), c->get_enemies().begin(), c->get_enemies().end());
+			current.players.push_back(v[i]);
+		}
 }
 
 LRESULT WndProc(HWND hWnd, LPDIRECTDRAWSURFACE BackScreen, LPDIRECTDRAWSURFACE RealScreen, int winWidth, int winHeight,
@@ -111,7 +116,9 @@ LRESULT WndProc(HWND hWnd, LPDIRECTDRAWSURFACE BackScreen, LPDIRECTDRAWSURFACE R
 		calculation();
 		collisionDetection();
 
-		send_position(current.me.x, current.me.y);
+		send_me(current.me.size, current.me.x, current.me.y);
+
+		receive_position();
 
 		window.pGameProc(hWnd, BackScreen, RealScreen, winWidth, winHeight, false);
 		break;
@@ -181,9 +188,23 @@ void GameProc(HWND hWnd, LPDIRECTDRAWSURFACE BackScreen, LPDIRECTDRAWSURFACE Rea
 	//////////////////////////////////////////////////////////////////////////
 
 	// Draw me
-	RECT meRect = { 0, 0, 16, 16 };
-	BackScreen->BltFast(current.me.x, current.me.y, unitImages[3], &meRect, DDBLTFAST_WAIT | DDBLTFAST_SRCCOLORKEY);
+	RECT me_rect;
+	me_rect.left = current.me.x;
+	me_rect.top = current.me.y;
+	me_rect.right = me_rect.left + 80;
+	me_rect.bottom = me_rect.top + 80;
+	RECT im_rect = { 0, 0, 16, 16 };
+	BackScreen->Blt(&me_rect, unitImages[3], &im_rect, DDBLT_WAIT, NULL);
 
+	for (int i = 0; i < current.players.size(); i++)
+	{
+		Enemy e = current.players[i];
+		RECT enemy_rect = { e.x, e.y, e.x + e.size, e.y + e.size };
+		BackScreen->Blt(&enemy_rect, unitImages[3], &im_rect, DDBLT_WAIT, NULL);
+	}
+
+	//////////////////////////////////////////////////////////////////////////
+	// TEXT
 	HDC hdc;
 	BackScreen->GetDC(&hdc);
 	string str = "pos: (";
@@ -198,6 +219,9 @@ void GameProc(HWND hWnd, LPDIRECTDRAWSURFACE BackScreen, LPDIRECTDRAWSURFACE Rea
 	str += to_string(current.me.vy);
 	str += ")";
 	TextOut(hdc, 50, 70, str.c_str(), str.size());
+	str = "Number: ";
+	str += to_string(current.players.size());
+	TextOut(hdc, 50, 90, str.c_str(), str.size());
 	BackScreen->ReleaseDC(hdc);
 
 	//////////////////////////////////////////////////////////////////////////
