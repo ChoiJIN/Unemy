@@ -34,6 +34,8 @@ class chat_participant
 public:
 	virtual ~chat_participant() {}
 	virtual void deliver(const chat_message& msg) = 0;
+	int id_;
+
 };
 
 typedef boost::shared_ptr<chat_participant> chat_participant_ptr;
@@ -59,7 +61,8 @@ public:
 	{
 		for each (chat_participant_ptr participant in participants_)
 		{
-			if (except_id) continue;
+			if (participant->id_ == except_id) 
+				continue;
 
 			participant->deliver(boost::ref(msg));
 		}
@@ -186,7 +189,6 @@ public:
 
 private:
 	tcp::socket socket_;
-	int id_;
 	chat_room& room_;
 	chat_message read_msg_;
 	chat_message_queue write_msgs_;

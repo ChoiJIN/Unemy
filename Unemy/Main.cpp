@@ -75,6 +75,8 @@ void send_me(int size, int x, int y)
 void receive_position()
 {
 	//chat_message msg = c->get_message();
+	// FIXME
+
 	current.players.clear();
 
 	auto v = c->get_enemies();
