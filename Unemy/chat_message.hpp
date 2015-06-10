@@ -92,7 +92,7 @@ public:
 	void add_id(int id)
 	{
 		using namespace std;
-		data_[header_length - id_length] = '3';
+		data_[header_length - id_length] = id+'0';
 		//memcpy(data_ + 4, ids, 1);
 	}
 

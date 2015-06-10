@@ -70,7 +70,7 @@ public:
 		char header[header_length + 1 - id_length] = "";
 		strncat(header, data_, header_length - id_length);
 		body_length_ = atoi(header);
-		char ids[id_length+1] = "";
+		char ids[id_length + 1] = "";
 		strncat(ids, data_ + header_length - id_length, id_length);
 		id_ = atoi(ids);
 		if (body_length_ > max_body_length)
@@ -86,13 +86,13 @@ public:
 		using namespace std; // For sprintf and memcpy.
 		char header[header_length + 1] = "";
 		sprintf(header, "%4d", body_length_);
-		memcpy(data_, header, header_length-id_length);
+		memcpy(data_, header, header_length - id_length);
 	}
 
 	void add_id(int id)
 	{
 		using namespace std;
-		data_[header_length - id_length] = '3';
+		data_[header_length - id_length] = id + '0';
 		//memcpy(data_ + 4, ids, 1);
 	}
 

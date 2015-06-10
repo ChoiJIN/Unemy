@@ -126,9 +126,7 @@ private:
 	{
 		if (!error)
 		{
-			//mtx_.lock();
 			read_enemy(read_msg_.get_id(), read_msg_.body());
-			//mtx_.unlock();
 
 			std::cout.write(read_msg_.body(), read_msg_.body_length());
 			std::cout << "\n";
@@ -191,8 +189,6 @@ private:
 	chat_message read_msg_;
 	chat_message_queue write_msgs_;
 	std::vector<Enemy> enemies;
-
-	boost::mutex mtx_;
 
 	int mycount = 0;
 };

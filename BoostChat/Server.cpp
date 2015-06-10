@@ -152,9 +152,10 @@ public:
 				boost::bind(&chat_session::handle_read_header, shared_from_this(),
 				boost::asio::placeholders::error));
 
-			std::cout << id_ << ": ";
-			std::cout.write(read_msg_.body(), read_msg_.body_length());
-			std::cout << std::endl;
+			// print position
+// 			std::cout << id_ << ": ";
+// 			std::cout.write(read_msg_.body(), read_msg_.body_length());
+// 			std::cout << std::endl;
 		}
 		else
 		{
