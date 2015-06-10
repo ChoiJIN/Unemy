@@ -74,16 +74,7 @@ void send_me(int size, int x, int y)
 
 void receive_position()
 {
-	//chat_message msg = c->get_message();
-	// FIXME
-
 	current.players = c->get_enemies();
-// 	if (!v.empty())
-// 		for (int i = 0; i < v.size(); i++)
-// 		{
-// 			//current.players.insert(current.players.begin(), c->get_enemies().begin(), c->get_enemies().end());
-// 			current.players.push_back(v[i]);
-// 		}
 }
 
 LRESULT WndProc(HWND hWnd, LPDIRECTDRAWSURFACE BackScreen, LPDIRECTDRAWSURFACE RealScreen, int winWidth, int winHeight,

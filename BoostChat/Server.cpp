@@ -18,6 +18,7 @@
 #include <boost/shared_ptr.hpp>
 #include <boost/enable_shared_from_this.hpp>
 #include <boost/asio.hpp>
+#include <boost/asio/deadline_timer.hpp>
 
 #include "chat_message.hpp"
 
@@ -53,7 +54,14 @@ public:
 	void leave(chat_participant_ptr participant, int id)
 	{
 		participants_.erase(participant);
-		// 게임을 떠났다는 것을 어떻게 표현할까..?
+
+		chat_message close_msg;
+		close_msg.set_id(id);
+		close_msg.set_type(chat_message::close);
+		close_msg.encode_header();
+
+		deliver(close_msg, id);
+		
 		std::cout << id << " 님이 게임을 떠났습니다." << std::endl;
 	}
 
@@ -61,7 +69,7 @@ public:
 	{
 		for each (chat_participant_ptr participant in participants_)
 		{
-			if (participant->id_ == except_id) 
+			if (participant->id_ == except_id)
 				continue;
 
 			participant->deliver(boost::ref(msg));
@@ -73,8 +81,14 @@ public:
 		return participants_.size();
 	}
 
+	int get_new_id()
+	{
+		return count++;
+	}
+
 private:
 	std::set<chat_participant_ptr> participants_;
+	int count = 0;
 };
 
 //----------------------------------------------------------------------
@@ -86,6 +100,7 @@ class chat_session
 public:
 	chat_session(boost::asio::io_service& io_service, chat_room& room)
 		: socket_(io_service),
+		deadline_(io_service),
 		room_(room)
 	{
 	}
@@ -98,10 +113,8 @@ public:
 	void start()
 	{
 		room_.join(shared_from_this());
-		id_ = room_.size();
-		char idc[5];
-		sprintf(idc, "%d", id_);
-		std::cout << idc << " 님이 접속하였습니다." << std::endl;
+		id_ = room_.get_new_id();
+		std::cout << id_ << " 님이 접속하였습니다." << std::endl;
 
 		boost::asio::async_read(socket_,
 			boost::asio::buffer(read_msg_.data(), chat_message::header_length),
@@ -144,7 +157,7 @@ public:
 		if (!error)
 		{
 			// 앞에 id를 붙여서 다른 클라이언트에게 보낸다.
-			read_msg_.add_id(id_);
+			read_msg_.set_id(id_);
 			room_.deliver(read_msg_, id_);
 
 			boost::asio::async_read(socket_,
@@ -153,9 +166,9 @@ public:
 				boost::asio::placeholders::error));
 
 			// print position
-// 			std::cout << id_ << ": ";
-// 			std::cout.write(read_msg_.body(), read_msg_.body_length());
-// 			std::cout << std::endl;
+			// 			std::cout << id_ << ": ";
+			// 			std::cout.write(read_msg_.body(), read_msg_.body_length());
+			// 			std::cout << std::endl;
 		}
 		else
 		{
@@ -190,6 +203,10 @@ public:
 
 private:
 	tcp::socket socket_;
+
+	bool stopped_;
+	boost::asio::deadline_timer deadline_;
+
 	chat_room& room_;
 	chat_message read_msg_;
 	chat_message_queue write_msgs_;

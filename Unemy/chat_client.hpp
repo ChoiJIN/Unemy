@@ -57,49 +57,6 @@ private:
 		}
 	}
 
-	bool read_id(int id)
-	{
-			return true;
-	}
-
-
-
-	void read_enemy(int id, const char* body)
-	{
-		using namespace std;
-		char size[5] = "";
-		char x[5] = "";
-		char y[5] = "";
-		int offset = 3;
-
-		auto i = find_if(enemies.begin(), enemies.end(), [id](Enemy e) { return e.id == id; });
-
-		// 새로운 적
-		if (enemies.empty() || i == enemies.end())
-		{
-			Enemy e;
-
-			e.id = id;
-			strncat(size, body, offset);
-			e.size = atoi(size);
-			strncat(x, body + offset, offset);
-			e.x = atoi(x);
-			strncat(y, body + 2 * offset, offset);
-			e.y = atoi(y);
-
-			enemies.push_back(e);
-		}
-		// 존재하는 적
-		else {
-			strncat(size, body, offset);
-			(*i).size = atoi(size);
-			strncat(x, body + offset, offset);
-			(*i).x = atoi(x);
-			strncat(y, body + 2 * offset, offset);
-			(*i).y = atoi(y);
-		}
-	}
-
 	void handle_read_header(const boost::system::error_code& error)
 	{
 		if (!error && read_msg_.decode_header())
@@ -111,14 +68,7 @@ private:
 		}
 		else
 		{
-			if (mycount > 3)
-			{
-				do_close();
-			}
-			if (!read_msg_.decode_header()) {
-				std::cout << "not successed... ";
-				mycount++;
-			}
+			do_close();
 		}
 	}
 
@@ -126,7 +76,7 @@ private:
 	{
 		if (!error)
 		{
-			read_enemy(read_msg_.get_id(), read_msg_.body());
+			read_enemy(read_msg_);
 
 			std::cout.write(read_msg_.body(), read_msg_.body_length());
 			std::cout << "\n";
@@ -139,6 +89,52 @@ private:
 		else
 		{
 			do_close();
+		}
+	}
+
+	void read_enemy(chat_message& msg)
+	{
+		using namespace std;
+		char size[5] = "";
+		char x[5] = "";
+		char y[5] = "";
+		int offset = 3;
+
+		int id = msg.get_id();
+
+		auto i = find_if(enemies.begin(), enemies.end(), [id](Enemy e) { return e.id == id; });
+
+		// 새로운 적
+		if (enemies.empty() || i == enemies.end())
+		{
+			Enemy e;
+
+			e.id = id;
+			strncat(size, msg.body(), offset);
+			e.size = atoi(size);
+			strncat(x, msg.body() + offset, offset);
+			e.x = atoi(x);
+			strncat(y, msg.body() + 2 * offset, offset);
+			e.y = atoi(y);
+
+			enemies.push_back(e);
+		}
+		// 존재하는 적
+		else {
+
+			if (msg.get_type() == chat_message::close)
+			{
+				enemies.erase(i);
+			}
+			else
+			{
+				strncat(size, msg.body(), offset);
+				(*i).size = atoi(size);
+				strncat(x, msg.body() + offset, offset);
+				(*i).x = atoi(x);
+				strncat(y, msg.body() + 2 * offset, offset);
+				(*i).y = atoi(y);
+			}
 		}
 	}
 

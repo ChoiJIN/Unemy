@@ -18,12 +18,24 @@
 class chat_message
 {
 public:
-	enum { id_length = 1 };
-	enum { header_length = 4 + id_length };
+	enum {
+		size_index = 0, size_length = 4,
+		id_index = size_length, id_length = 1,
+		type_index = size_length + id_length, type_length = 1,
+		header_length = size_length + id_length + type_length
+	};
+
+	// type
+	enum {
+		normal, close
+	};
+
 	enum { max_body_length = 512 };
 
 	chat_message()
-		: body_length_(0)
+		: body_length_(0),
+		id_(0),
+		type_(normal)
 	{
 	}
 
@@ -67,12 +79,22 @@ public:
 	bool decode_header()
 	{
 		using namespace std; // For strncat and atoi.
-		char header[header_length + 1 - id_length] = "";
-		strncat(header, data_, header_length - id_length);
-		body_length_ = atoi(header);
-		char ids[id_length + 1] = "";
-		strncat(ids, data_ + header_length - id_length, id_length);
-		id_ = atoi(ids);
+
+		// size
+		char size[size_length + 1] = "";
+		strncat_s(size, data_ + size_index, size_length);
+		body_length_ = atoi(size);
+
+		// id
+		char id[id_length + 1] = "";
+		strncat_s(id, data_ + id_index, id_length);
+		id_ = atoi(id);
+
+		// type
+		char type[type_length + 1] = "";
+		strncat_s(type, data_ + type_index, type_length);
+		type_ = atoi(type);
+
 		if (body_length_ > max_body_length)
 		{
 			body_length_ = 0;
@@ -85,15 +107,18 @@ public:
 	{
 		using namespace std; // For sprintf and memcpy.
 		char header[header_length + 1] = "";
-		sprintf(header, "%4d", body_length_);
-		memcpy(data_, header, header_length - id_length);
+
+		sprintf(header + size_index, "%04d", body_length_);
+		sprintf(header + id_index, "%01d", id_);
+		sprintf(header + type_index, "%01d", type_);
+
+		memcpy(data_, header, header_length);
 	}
 
-	void add_id(int id)
+	void set_id(int id)
 	{
-		using namespace std;
-		data_[header_length - id_length] = id + '0';
-		//memcpy(data_ + 4, ids, 1);
+		id_ = id;
+		data_[id_index] = id + '0';
 	}
 
 	int get_id()
@@ -101,9 +126,21 @@ public:
 		return id_;
 	}
 
+	void set_type(int type)
+	{
+		type_ = type;
+		data_[type_index] = type;
+	}
+
+	int get_type()
+	{
+		return type_;
+	}
+
 private:
 	char data_[header_length + max_body_length];
 	int id_;
+	int type_;
 	size_t body_length_;
 };
 
