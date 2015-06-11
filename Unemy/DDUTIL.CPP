@@ -181,35 +181,43 @@ extern "C" IDirectDrawPalette *DDLoadPalette(IDirectDraw* pdd, LPCSTR szBitmap)
 
 extern "C" DWORD DDColorMatch(IDirectDrawSurface *pdds, COLORREF rgb)
 {
-    COLORREF rgbT;
-    HDC hdc;
-    DWORD dw = CLR_INVALID;
-    DDSURFACEDESC ddsd;
-    HRESULT hres;
+	COLORREF                rgbT;
+	HDC                     hdc;
+	DWORD                   dw = CLR_INVALID;
+	DDSURFACEDESC           ddsd;
+	HRESULT                 hres;
 
-    if (rgb != CLR_INVALID && pdds->GetDC(&hdc) == DD_OK)
-    {
-		rgbT = GetPixel(hdc, 0, 0);
-		SetPixel(hdc, 0, 0, rgb);
+	//
+	//  Use GDI SetPixel to color match for us
+	//
+	if (rgb != CLR_INVALID && pdds->GetDC(&hdc) == DD_OK)
+	{
+		rgbT = GetPixel(hdc, 0, 0);     // Save current pixel value
+		SetPixel(hdc, 0, 0, rgb);       // Set our value
 		pdds->ReleaseDC(hdc);
-    }
-
-    ddsd.dwSize = sizeof(ddsd);
-    while ((hres = pdds->Lock(NULL, &ddsd, 0, NULL)) == DDERR_WASSTILLDRAWING);
-
-    if (hres == DD_OK)
-    {
-		dw  = *(DWORD *)ddsd.lpSurface;
-		dw &= (1 << ddsd.ddpfPixelFormat.dwRGBBitCount)-1;
+	}
+	//
+	// Now lock the surface so we can read back the converted color
+	//
+	ddsd.dwSize = sizeof(ddsd);
+	while ((hres = pdds->Lock(NULL, &ddsd, 0, NULL)) == DDERR_WASSTILLDRAWING)
+		;
+	if (hres == DD_OK)
+	{
+		dw = *(DWORD *)ddsd.lpSurface;                 // Get DWORD
+		if (ddsd.ddpfPixelFormat.dwRGBBitCount < 32)
+			dw &= (1 << ddsd.ddpfPixelFormat.dwRGBBitCount) - 1;  // Mask it to bpp
 		pdds->Unlock(NULL);
-    }
-
-    if (rgb != CLR_INVALID && pdds->GetDC(&hdc) == DD_OK)
-    {
+	}
+	//
+	//  Now put the color that was there back.
+	//
+	if (rgb != CLR_INVALID && pdds->GetDC(&hdc) == DD_OK)
+	{
 		SetPixel(hdc, 0, 0, rgbT);
 		pdds->ReleaseDC(hdc);
-    }
-    return dw;
+	}
+	return dw;
 }
 
 extern "C" HRESULT DDSetColorKey(IDirectDrawSurface *pdds, COLORREF rgb)

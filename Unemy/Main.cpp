@@ -20,14 +20,18 @@ using namespace std;
 /************************************************************************/
 /* Declaration                                                          */
 /************************************************************************/
-void loadImages();						// 모든 이미지를 로딩 함.
-void changeScreen(Screen state);		// Screen 전환 함수
-void changeBackground(Screen state);	// Background 전환 함수
-char* backgroundFromEnum(Screen state);	// Enum으로부터 Background의 파일 경로를 받아옴.
+void load_images();						// 모든 이미지를 로딩 함.
+void change_screen(Screen state);		// Screen 전환 함수
+void change_background(Screen state);	// Background 전환 함수
+char* background_from_enum(Screen state);	// Enum으로부터 Background의 파일 경로를 받아옴.
 
 // Physics
 void calculation();
-void collisionDetection();
+void collision_detection();
+
+// Network
+void send_me(int size, int x, int y);
+void receive_position();
 
 /************************************************************************/
 /* Global Variable                                                      */
@@ -42,7 +46,7 @@ LPDIRECTDRAWSURFACE BackImage;
 struct Color {
 	int r, g, b;
 };
-Color colorKey = { 0, 0, 0 };	// 현재 컬러키가 먹히지 않음. 무조건 검은색으로..
+Color colorKey = { 0, 255, 0 };	// 현재 컬러키가 먹히지 않음. 무조건 검은색으로..
 
 chat_client* c;
 
@@ -60,23 +64,6 @@ bool tup, tdown, tleft, tright;
 double lr_push, td_push;
 double DELTA_PUSH = 0.02;
 
-void send_me(int size, int x, int y)
-{
-	using namespace std; // For strlen and memcpy.
-	chat_message msg;
-	sprintf(msg.body(), "%03d%03d%03d", size, x, y);
-	msg.body_length(strlen(msg.body()));
-
-	//memcpy(msg.body(), line, msg.body_length());
-	msg.encode_header();
-	c->write(msg);
-}
-
-void receive_position()
-{
-	current.players = c->get_enemies();
-}
-
 LRESULT WndProc(HWND hWnd, LPDIRECTDRAWSURFACE BackScreen, LPDIRECTDRAWSURFACE RealScreen, int winWidth, int winHeight,
 	UINT message, WPARAM wParam, LPARAM lParam)
 {
@@ -85,7 +72,7 @@ LRESULT WndProc(HWND hWnd, LPDIRECTDRAWSURFACE BackScreen, LPDIRECTDRAWSURFACE R
 	case WM_MOUSEMOVE:
 		break;
 	case WM_LBUTTONDOWN:
-		changeScreen(Screen::GAME);
+		change_screen(Screen::GAME);
 		break;
 	case WM_DESTROY:
 		window.ReleaseAll();
@@ -105,7 +92,7 @@ LRESULT WndProc(HWND hWnd, LPDIRECTDRAWSURFACE BackScreen, LPDIRECTDRAWSURFACE R
 
 		// Physics
 		calculation();
-		collisionDetection();
+		collision_detection();
 
 		send_me(current.me.size, current.me.x, current.me.y);
 
@@ -175,7 +162,6 @@ void GameProc(HWND hWnd, LPDIRECTDRAWSURFACE BackScreen, LPDIRECTDRAWSURFACE Rea
 	// Clear Back Ground
 	RECT	BackRect = { 0, 0, winWidth, winHeight };
 	BackScreen->BltFast(0, 0, BackImage, &BackRect, DDBLTFAST_WAIT | DDBLTFAST_SRCCOLORKEY);
-
 	//////////////////////////////////////////////////////////////////////////
 
 	// Draw me
@@ -184,8 +170,10 @@ void GameProc(HWND hWnd, LPDIRECTDRAWSURFACE BackScreen, LPDIRECTDRAWSURFACE Rea
 	me_rect.top = current.me.y;
 	me_rect.right = me_rect.left + 80;
 	me_rect.bottom = me_rect.top + 80;
-	RECT im_rect = { 0, 0, 16, 16 };
-	BackScreen->Blt(&me_rect, unitImages[3], &im_rect, DDBLT_WAIT, NULL);
+	RECT im_rect = { 0, 0, 8, 8 };
+
+	BackScreen->Blt(&me_rect, unitImages[2], &im_rect, DDBLT_WAIT | DDBLT_KEYSRC, NULL);
+	//BackScreen->BltFast(100, 100, testi, &im_rect, DDBLTFAST_WAIT | DDBLTFAST_SRCCOLORKEY);
 
 	for (int i = 0; i < current.players.size(); i++)
 	{
@@ -260,17 +248,17 @@ int __stdcall WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
 		window.SetWndProc(WndProc);
 		window.Init(hInstance, hPrevInstance, lpCmdLine, nCmdShow);
 
-		loadImages();
+		load_images();
 
 		controller.setCurrent(&current);
 
 		//////////////////////////////////////////////////////////////////////////
 		// Game SETTING
 		//////////////////////////////////////////////////////////////////////////
-		BackImage = backgroundImages[0];
-		changeScreen(Screen::MENU);
+		//BackImage = backgroundImages[2];
+		change_screen(Screen::MENU);
 
-		current.me.size = 10;
+		current.me.size = 40;
 		current.me.x = 100;
 		current.me.y = 100;
 
@@ -279,17 +267,6 @@ int __stdcall WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
 		// Loop Start
 		//////////////////////////////////////////////////////////////////////////
 		window.MainLoop();
-
-// 		char line[chat_message::max_body_length + 1];
-// 		while (std::cin.getline(line, chat_message::max_body_length + 1))
-// 		{
-// 			using namespace std; // For strlen and memcpy.
-// 			chat_message msg;
-// 			msg.body_length(strlen(line));
-// 			memcpy(msg.body(), line, msg.body_length());
-// 			msg.encode_header();
-// 			c.write(msg);
-// 		}
 
 		c->close();
 		t.join();
@@ -305,26 +282,28 @@ int __stdcall WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
 /************************************************************************/
 /* Implementation                                                       */
 /************************************************************************/
-void changeScreen(Screen state)
+void change_screen(Screen state)
 {
 	if (current.screen == state) {
 		// do nothing
 	}
 	else {
 		current.screen = state;
-		changeBackground(current.screen);
+		change_background(current.screen);
 	}
 }
 
-void changeBackground(Screen state)
+void change_background(Screen state)
 {
-	// 	BackImage = DDLoadBitmap(window.DirectOBJ, backgroundFromEnum(state), 0, 0);
-	// 	DDSetColorKey(BackImage, RGB(0, 0, 0));
-
 	BackImage = backgroundImages[state];
 }
 
-char* backgroundFromEnum(Screen state)
+void change_my_size(int size)
+{
+
+}
+
+char* background_from_enum(Screen state)
 {
 	switch (state)
 	{
@@ -340,19 +319,19 @@ char* backgroundFromEnum(Screen state)
 	}
 }
 
-void loadImages()
+void load_images()
 {
-	LPDIRECTDRAWSURFACE temp;
 
 
 	int background_number = 3;		// number of backgrounds
 	char *background_files[] = {
 		"images/background/back.bmp",
 		"images/background/menu.bmp",
-		"images/background/game.bmp"
+		"images/Background/universe.bmp"
 	};
 	for (int i = 0; i < background_number; i++)
 	{
+		LPDIRECTDRAWSURFACE temp;
 		temp = DDLoadBitmap(window.DirectOBJ, background_files[i], 0, 0);
 		DDSetColorKey(temp, RGB(colorKey.r, colorKey.g, colorKey.b));
 		backgroundImages.push_back(temp);
@@ -373,6 +352,8 @@ void loadImages()
 	{
 		for (int j = 0; j < size_number; j++)
 		{
+			LPDIRECTDRAWSURFACE temp;
+
 			string str(unit_files[i]);
 			str += size_files[j];
 
@@ -416,9 +397,10 @@ void calculation()
 }
 
 int win_offset = 30;
-void collisionDetection()
+void collision_detection()
 {
 	int offset = current.me.size + win_offset;
+
 	if (current.me.x > window.WIN_WIDTH - offset) {
 		current.me.x = window.WIN_WIDTH - offset;
 		current.me.vx = 0;
@@ -436,4 +418,22 @@ void collisionDetection()
 		current.me.y = offset;
 		current.me.vy = 0;
 	}
+}
+
+
+void send_me(int size, int x, int y)
+{
+	using namespace std; // For strlen and memcpy.
+	chat_message msg;
+	sprintf(msg.body(), "%03d%03d%03d", size, x, y);
+	msg.body_length(strlen(msg.body()));
+
+	//memcpy(msg.body(), line, msg.body_length());
+	msg.encode_header();
+	c->write(msg);
+}
+
+void receive_position()
+{
+	current.players = c->get_enemies();
 }
