@@ -76,7 +76,7 @@ private:
 	{
 		if (!error)
 		{
-			read_enemy(read_msg_);
+			read_msg(read_msg_);
 
 			std::cout.write(read_msg_.body(), read_msg_.body_length());
 			std::cout << "\n";
@@ -92,50 +92,74 @@ private:
 		}
 	}
 
-	void read_enemy(chat_message& msg)
+	void read_msg(chat_message& msg)
 	{
 		using namespace std;
-		char size[5] = "";
-		char x[5] = "";
-		char y[5] = "";
-		int offset = 3;
 
 		int id = msg.get_id();
+		int type = msg.get_type();
+
 
 		auto i = find_if(enemies.begin(), enemies.end(), [id](Enemy e) { return e.id == id; });
 
-		// 새로운 적
-		if (enemies.empty() || i == enemies.end())
+		switch (type)
 		{
-			Enemy e;
+		case chat_message::normal:
+		{
+			char size[4+1] = "";
+			char x[4+1] = "";
+			char y[4+1] = "";
+			char vx[4 + 1] = "";
+			char vy[4 + 1] = "";
 
-			e.id = id;
-			strncat(size, msg.body(), offset);
-			e.size = atoi(size);
-			strncat(x, msg.body() + offset, offset);
-			e.x = atoi(x);
-			strncat(y, msg.body() + 2 * offset, offset);
-			e.y = atoi(y);
-
-			enemies.push_back(e);
-		}
-		// 존재하는 적
-		else {
-
-			if (msg.get_type() == chat_message::close)
+			// 새로운 적
+			if (enemies.empty() || i == enemies.end())
 			{
-				enemies.erase(i);
+				Enemy e;
+
+				e.id = id;
+				strncat(size, msg.body(), body_offset);
+				e.size = atoi(size);
+				strncat(x, msg.body() + body_offset, body_offset);
+				e.x = atoi(x);
+				strncat(y, msg.body() + 2 * body_offset, body_offset);
+				e.y = atoi(y);
+				strncat(vx, msg.body() + 3 * body_offset, body_offset);
+				e.vx = atoi(vx) / 100.0;
+				strncat(vy, msg.body() + 4 * body_offset, body_offset);
+				e.vy = atoi(vy) / 100.0;
+
+				enemies.push_back(e);
 			}
-			else
-			{
-				strncat(size, msg.body(), offset);
+			// 존재하는 적
+			else {
+				strncat(size, msg.body(), body_offset);
 				(*i).size = atoi(size);
-				strncat(x, msg.body() + offset, offset);
+				strncat(x, msg.body() + body_offset, body_offset);
 				(*i).x = atoi(x);
-				strncat(y, msg.body() + 2 * offset, offset);
+				strncat(y, msg.body() + 2 * body_offset, body_offset);
 				(*i).y = atoi(y);
+				strncat(vx, msg.body() + 3 * body_offset, body_offset);
+				(*i).vx = atoi(vx) / 100.0;
+				strncat(vy, msg.body() + 4 * body_offset, body_offset);
+				(*i).vy = atoi(vy) / 100.0;
 			}
+			break;
 		}
+
+		case chat_message::collision:
+		{
+
+			break;
+		}
+
+		case chat_message::close:
+		{
+			enemies.erase(i);
+			break;
+		}
+		}
+
 	}
 
 	void do_write(chat_message msg)
@@ -184,9 +208,13 @@ private:
 	tcp::socket socket_;
 	chat_message read_msg_;
 	chat_message_queue write_msgs_;
-	std::vector<Enemy> enemies;
-
+	int body_offset = 4;
 	int mycount = 0;
+
+	// Game
+	std::vector<Enemy> enemies;
+	int my_id_;
+
 };
 
 #endif

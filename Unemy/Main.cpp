@@ -30,8 +30,8 @@ void calculation();
 void collision_detection();
 
 // Network
-void send_me(int size, int x, int y);
-void receive_position();
+void send_me(int size, int x, int y, double vx, double vy);
+void receive_from_server();
 
 /************************************************************************/
 /* Global Variable                                                      */
@@ -94,9 +94,9 @@ LRESULT WndProc(HWND hWnd, LPDIRECTDRAWSURFACE BackScreen, LPDIRECTDRAWSURFACE R
 		calculation();
 		collision_detection();
 
-		send_me(current.me.size, current.me.x, current.me.y);
+		send_me(current.me.size, current.me.x, current.me.y, current.me.vx, current.me.vy);
 
-		receive_position();
+		receive_from_server();
 
 		window.pGameProc(hWnd, BackScreen, RealScreen, winWidth, winHeight, false);
 		break;
@@ -166,20 +166,20 @@ void GameProc(HWND hWnd, LPDIRECTDRAWSURFACE BackScreen, LPDIRECTDRAWSURFACE Rea
 
 	// Draw me
 	RECT me_rect;
-	me_rect.left = current.me.x;
-	me_rect.top = current.me.y;
-	me_rect.right = me_rect.left + 80;
-	me_rect.bottom = me_rect.top + 80;
-	RECT im_rect = { 0, 0, 8, 8 };
+	me_rect.left = current.me.x - current.me.size;
+	me_rect.top = current.me.y - current.me.size;
+	me_rect.right = current.me.x + current.me.size;
+	me_rect.bottom = current.me.y + current.me.size;
+	RECT im_rect = { 0, 0, 80, 80 };
 
-	BackScreen->Blt(&me_rect, unitImages[2], &im_rect, DDBLT_WAIT | DDBLT_KEYSRC, NULL);
+	BackScreen->Blt(&me_rect, unitImages[4], &im_rect, DDBLT_WAIT | DDBLT_KEYSRC, NULL);
 	//BackScreen->BltFast(100, 100, testi, &im_rect, DDBLTFAST_WAIT | DDBLTFAST_SRCCOLORKEY);
 
 	for (int i = 0; i < current.players.size(); i++)
 	{
 		Enemy e = current.players[i];
-		RECT enemy_rect = { e.x, e.y, e.x + e.size, e.y + e.size };
-		BackScreen->Blt(&enemy_rect, unitImages[3], &im_rect, DDBLT_WAIT, NULL);
+		RECT enemy_rect = { e.x - e.size, e.y - e.size, e.x + e.size, e.y + e.size };
+		BackScreen->Blt(&enemy_rect, unitImages[4], &im_rect, DDBLT_WAIT | DDBLT_KEYSRC, NULL);
 	}
 
 	//////////////////////////////////////////////////////////////////////////
@@ -226,7 +226,7 @@ int __stdcall WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
 		//////////////////////////////////////////////////////////////////////////
 		// Network SETTING
 		//////////////////////////////////////////////////////////////////////////
-		const char ip[] = "127.0.0.1";
+		const char ip[] = "222.112.27.129";
 		const char port[] = "5166";
 
 		boost::asio::io_service io_service;
@@ -258,9 +258,9 @@ int __stdcall WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
 		//BackImage = backgroundImages[2];
 		change_screen(Screen::MENU);
 
-		current.me.size = 40;
-		current.me.x = 100;
-		current.me.y = 100;
+		current.me.size = 10;
+		current.me.x = 300;
+		current.me.y = 300;
 
 
 		//////////////////////////////////////////////////////////////////////////
@@ -338,7 +338,7 @@ void load_images()
 	}
 
 	int unit_number = 1;
-	int size_number = 4;
+	int size_number = 5;
 	char* unit_files[] = {
 		"images/units/basic/"
 	};
@@ -346,7 +346,8 @@ void load_images()
 		"s1.bmp",
 		"s2.bmp",
 		"s3.bmp",
-		"s4.bmp"
+		"s4.bmp",
+		"test.bmp"
 	};
 	for (int i = 0; i < unit_number; i++)
 	{
@@ -421,11 +422,18 @@ void collision_detection()
 }
 
 
-void send_me(int size, int x, int y)
+void send_me(int size, int x, int y, double vx, double vy)
 {
 	using namespace std; // For strlen and memcpy.
 	chat_message msg;
-	sprintf(msg.body(), "%03d%03d%03d", size, x, y);
+
+	int vx1 = (int)vx;
+	int vx2 = (int)(vx * 100) % 100;
+
+	int vy1 = (int)vy;
+	int vy2 = (int)(vy * 100) % 100;
+
+	sprintf(msg.body(), "%04d%04d%04d%02d%02d%02d%02d", size, x, y, vx1, vx2, vy1, vy2);
 	msg.body_length(strlen(msg.body()));
 
 	//memcpy(msg.body(), line, msg.body_length());
@@ -433,7 +441,7 @@ void send_me(int size, int x, int y)
 	c->write(msg);
 }
 
-void receive_position()
+void receive_from_server()
 {
 	current.players = c->get_enemies();
 }

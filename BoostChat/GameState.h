@@ -10,6 +10,7 @@ enum PlayerState {
 };
 
 struct Player {
+	int id;
 	int size;	// size is related movement
 	int x, y;	// current position
 	double vx, vy;	// current velocity
@@ -21,7 +22,6 @@ struct Enemy {
 	int id;
 	int size;
 	int x, y;
-	double vx, vy;
 	PlayerState state;
 };
 
