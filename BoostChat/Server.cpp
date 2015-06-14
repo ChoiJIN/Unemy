@@ -4,6 +4,8 @@
 #include <iostream>
 #include <list>
 #include <set>
+#include <cmath>
+#include <ctime>
 #include <boost/bind.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/enable_shared_from_this.hpp>
@@ -172,6 +174,21 @@ public:
 
 	}
 
+	chat_message make_normal_msg(Player p)
+	{
+		chat_message normal_msg;
+		normal_msg.set_id(p.id);
+		normal_msg.set_type(chat_message::normal);
+		normal_msg.set_body_size(p.size);
+		normal_msg.set_body_x(p.x);
+		normal_msg.set_body_y(p.y);
+		normal_msg.set_body_vx(p.vx);
+		normal_msg.set_body_vy(p.vy);
+		normal_msg.encode_header();
+
+		return normal_msg;
+	}
+
 	chat_message make_close_msg(int sender_id)
 	{
 		chat_message close_msg;
@@ -267,6 +284,11 @@ public:
 		}
 		else
 			return (*found);
+	}
+
+	int get_player_number()
+	{
+		return players.size();
 	}
 
 private:
@@ -430,14 +452,51 @@ public:
 		start_accept();
 	}
 
+	chat_room room_;
+
 private:
 	boost::asio::io_service& io_service_;
 	tcp::acceptor acceptor_;
-	chat_room room_;
 };
 
 typedef boost::shared_ptr<chat_server> chat_server_ptr;
 typedef std::list<chat_server_ptr> chat_server_list;
+
+//----------------------------------------------------------------------
+const int ai_enemy_appear_time = 10;
+const int window_width = 800;
+const int window_height = 600;
+
+void make_enemy(const boost::system::error_code& /*e*/,
+	boost::asio::deadline_timer* t, chat_server_ptr server)
+{
+	if (server->room_.get_player_number() != 0)
+	{
+		srand((unsigned int)time(NULL));
+		std::cout << " test tstest" << std::endl;
+
+		int id = server->room_.get_new_id();
+		int size = 10;
+		int x = rand() % window_width;
+		int y = rand() % window_height;
+		Player p = { id, size, x, y };
+
+		chat_message msg = server->room_.make_normal_msg(p);
+
+		server->room_.deliver(msg);
+	}
+
+	t->expires_at(t->expires_at() 
+		+ boost::posix_time::seconds(ai_enemy_appear_time));
+
+	t->async_wait(boost::bind(make_enemy,
+		boost::asio::placeholders::error, t, server));
+}
+
+void move_enemy(const boost::system::error_code& /*2*/)
+{
+
+}
 
 //----------------------------------------------------------------------
 
@@ -454,6 +513,13 @@ int main()
 			tcp::endpoint endpoint(tcp::v4(), atoi("5166"));
 			chat_server_ptr server(new chat_server(io_service, endpoint));
 			servers.push_back(server);
+		}
+
+		{
+			int count = 0;
+			boost::asio::deadline_timer t(io_service, boost::posix_time::seconds(1));
+			t.async_wait(boost::bind(make_enemy,
+				boost::asio::placeholders::error, &t, servers.back()));
 		}
 
 		io_service.run();

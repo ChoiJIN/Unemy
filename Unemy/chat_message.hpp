@@ -125,7 +125,7 @@ public:
 		data_[id_index] = id + '0';
 	}
 
-	int get_id() const
+	int get_id() const const
 	{
 		return id_;
 	}
@@ -136,14 +136,14 @@ public:
 		data_[type_index] = type;
 	}
 
-	int get_type()
+	int get_type() const
 	{
 		return type_;
 	}
 
 	//////////////////////////////////////////////////////////////////////////
 	// Body
-	int get_body_size()
+	int get_body_size() const
 	{
 		char size[4 + 1] = "";
 		strncat(size, body(), body_offset_);
@@ -151,7 +151,12 @@ public:
 		return atoi(size);
 	}
 
-	int get_body_x()
+	void set_body_size(int size)
+	{
+		sprintf(body(), "%04d", size);
+	}
+
+	int get_body_x() const
 	{
 		char y[4 + 1] = "";
 		strncat(y, body() + body_offset_, body_offset_);
@@ -159,7 +164,12 @@ public:
 		return atoi(y);
 	}
 
-	int get_body_y()
+	void set_body_x(int x)
+	{
+		sprintf(body() + body_offset_, "%04d", x);
+	}
+
+	int get_body_y() const
 	{
 		char y[4 + 1] = "";
 		strncat(y, body() + 2 * body_offset_, body_offset_);
@@ -167,7 +177,12 @@ public:
 		return atoi(y);
 	}
 
-	double get_body_vx()
+	void set_body_y(int y)
+	{
+		sprintf(body() + 2 * body_offset_, "%04d", y);
+	}
+
+	double get_body_vx() const
 	{
 		char vx[4 + 1] = "";
 		strncat(vx, body() + 3 * body_offset_, body_offset_);
@@ -175,7 +190,14 @@ public:
 		return (atoi(vx) / 100.0);
 	}
 
-	double get_body_vy()
+	void set_body_vx(double vx)
+	{
+		int vx1 = (int)vx;
+		int vx2 = (int)(vx * 100) % 100;
+		sprintf(body() + 3 * body_offset_, "%02d%02d", vx1, vx2);
+	}
+
+	double get_body_vy() const
 	{
 		char vy[4 + 1] = "";
 		strncat(vy, body() + 4 * body_offset_, body_offset_);
@@ -183,7 +205,14 @@ public:
 		return (atoi(vy) / 100.0);
 	}
 
-	int get_absorber_id()
+	void set_body_vy(double vy)
+	{
+		int vy1 = (int)vy;
+		int vy2 = (int)(vy * 100) % 100;
+		sprintf(body() + 4 * body_offset_, "%02d%02d", vy1, vy2);
+	}
+
+	int get_absorber_id() const
 	{
 		char id[1 + 1] = "";
 		strncat(id, body(), id_length);
@@ -196,7 +225,7 @@ public:
 		body()[0] = (int)absorber_id;
 	}
 
-	int get_target_id()
+	int get_target_id() const
 	{
 		char id[1 + 1] = "";
 		strncat(id, body() + 1, id_length);

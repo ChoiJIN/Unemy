@@ -151,12 +151,22 @@ public:
 		return atoi(size);
 	}
 
+	void set_body_size(int size)
+	{
+		sprintf(body(), "%04d", size);
+	}
+
 	int get_body_x() const
 	{
 		char y[4 + 1] = "";
 		strncat(y, body() + body_offset_, body_offset_);
 
 		return atoi(y);
+	}
+
+	void set_body_x(int x)
+	{
+		sprintf(body() + body_offset_, "%04d", x);
 	}
 
 	int get_body_y() const
@@ -167,6 +177,11 @@ public:
 		return atoi(y);
 	}
 
+	void set_body_y(int y)
+	{
+		sprintf(body() + 2*body_offset_, "%04d", y);
+	}
+
 	double get_body_vx() const
 	{
 		char vx[4 + 1] = "";
@@ -175,12 +190,26 @@ public:
 		return (atoi(vx) / 100.0);
 	}
 
+	void set_body_vx(double vx)
+	{
+		int vx1 = (int)vx;
+		int vx2 = (int)(vx * 100) % 100;
+		sprintf(body() + 3*body_offset_, "%02d%02d", vx1, vx2);
+	}
+
 	double get_body_vy() const
 	{
 		char vy[4 + 1] = "";
 		strncat(vy, body() + 4 * body_offset_, body_offset_);
 
 		return (atoi(vy) / 100.0);
+	}
+
+	void set_body_vy(double vy)
+	{
+		int vy1 = (int)vy;
+		int vy2 = (int)(vy * 100) % 100;
+		sprintf(body() + 4*body_offset_, "%02d%02d", vy1, vy2);
 	}
 
 	int get_absorber_id() const
