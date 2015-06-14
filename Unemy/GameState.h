@@ -4,16 +4,11 @@ enum Screen {
 	START, MENU, GAME, NETWORK
 };
 
-enum PlayerState {
-	ALIVE, DEAD
-};
-
 struct Player {
 	int size;	// size is related movement
 	int x, y;	// current position
 	double vx, vy;	// current velocity
 	double ax, ay;	// current acceleration
-	PlayerState state;
 };
 
 struct Current {

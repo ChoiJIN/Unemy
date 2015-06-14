@@ -43,7 +43,7 @@ LPDIRECTDRAWSURFACE BackImage;
 struct Color {
 	int r, g, b;
 };
-Color colorKey = { 0, 0, 0 };	// 현재 컬러키가 먹히지 않음. 무조건 검은색으로..
+Color colorKey = { 0, 255, 0 };	// 현재 컬러키가 먹히지 않음. 무조건 검은색으로..
 
 /************************************************************************/
 /* Resources                                                            */
@@ -334,7 +334,7 @@ void loadImages()
 	char *background_files[] = {
 		"images/background/back.bmp",
 		"images/background/menu.bmp",
-		"images/background/game.bmp"
+		"images/background/universe.bmp"
 	};
 	for (int i = 0; i < background_number; i++)
 	{
@@ -344,7 +344,7 @@ void loadImages()
 	}
 
 	int unit_number = 1;
-	int size_number = 4;
+	int size_number = 5;
 	char* unit_files[] = {
 		"images/units/basic/"
 	};
@@ -352,7 +352,8 @@ void loadImages()
 		"s1.bmp",
 		"s2.bmp",
 		"s3.bmp",
-		"s4.bmp"
+		"s4.bmp",
+		"test.bmp"
 	};
 	for (int i = 0; i < unit_number; i++)
 	{
