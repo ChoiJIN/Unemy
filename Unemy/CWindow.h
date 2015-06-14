@@ -5,8 +5,8 @@
 #include <ddraw.h>
 #include <dsound.h>
 
-#include "dsutil.h"
-#include "ddutil.h"
+// #include "dsutil.h"
+// #include "ddutil.h"
 
 class CWindow
 {

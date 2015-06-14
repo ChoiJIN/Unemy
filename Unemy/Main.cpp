@@ -1,40 +1,42 @@
-#include <windows.h>
+//#include <windows.h>
+#include <iostream>
 #include <vector>
 #include <string>
 
 #include "CWindow.h"
 
 #include "GameState.h"
+#include "Controller.h"
+#include "Game.h"
 
 using namespace std;
-
-/************************************************************************/
-/* Declaration                                                          */
-/************************************************************************/
-void loadImages();						// 모든 이미지를 로딩 함.
-void changeScreen(Screen state);		// Screen 전환 함수
-void changeBackground(Screen state);	// Background 전환 함수
-char* backgroundFromEnum(Screen state);	// Enum으로부터 Background의 파일 경로를 받아옴.
 
 /************************************************************************/
 /* Global Variable                                                      */
 /************************************************************************/
 CWindow window;
+
+//Current current;
+Controller controller;
+Game game;
+
 LPDIRECTDRAWSURFACE BackImage;
-struct Color {
-	int r, g, b;
-};
-Color colorKey = { 0, 0, 0 };	// 현재 컬러키가 먹히지 않음. 무조건 검은색으로..
+LPDIRECTDRAWSURFACE MeImage;
 
 /************************************************************************/
 /* Resources                                                            */
 /************************************************************************/
-vector<LPDIRECTDRAWSURFACE> backgroundImages;
-vector<LPDIRECTDRAWSURFACE> unitImages;
+// vector<LPDIRECTDRAWSURFACE> backgroundImages;
+// vector<LPDIRECTDRAWSURFACE> unitImages;
 
 /************************************************************************/
 /* WndProc                                                              */
 /************************************************************************/
+// Toggle arrow key
+bool tup, tdown, tleft, tright;
+double lr_push, td_push;
+double DELTA_PUSH = 0.02;
+
 LRESULT WndProc(HWND hWnd, LPDIRECTDRAWSURFACE BackScreen, LPDIRECTDRAWSURFACE RealScreen, int winWidth, int winHeight,
 	UINT message, WPARAM wParam, LPARAM lParam)
 {
@@ -43,7 +45,7 @@ LRESULT WndProc(HWND hWnd, LPDIRECTDRAWSURFACE BackScreen, LPDIRECTDRAWSURFACE R
 	case WM_MOUSEMOVE:
 		break;
 	case WM_LBUTTONDOWN:
-		changeScreen(Screen::GAME);
+		game.change_screen(Screen::GAME);
 		break;
 	case WM_DESTROY:
 		window.ReleaseAll();
@@ -51,9 +53,21 @@ LRESULT WndProc(HWND hWnd, LPDIRECTDRAWSURFACE BackScreen, LPDIRECTDRAWSURFACE R
 		break;
 
 	case WM_TIMER:
-		//_GameProc(false);
+		if (tleft)
+			controller.push(Controller::LEFT, lr_push += DELTA_PUSH);
+		else if (tright)
+			controller.push(Controller::RIGHT, lr_push += DELTA_PUSH);
+
+		if (tup)
+			controller.push(Controller::UP, td_push += DELTA_PUSH);
+		else if (tdown)
+			controller.push(Controller::DOWN, td_push += DELTA_PUSH);
+
+		game.me_calculation();
+
 		window.pGameProc(hWnd, BackScreen, RealScreen, winWidth, winHeight, false);
 		break;
+
 	case WM_KEYDOWN:
 		switch (wParam)
 		{
@@ -62,16 +76,16 @@ LRESULT WndProc(HWND hWnd, LPDIRECTDRAWSURFACE BackScreen, LPDIRECTDRAWSURFACE R
 			PostMessage(hWnd, WM_CLOSE, 0, 0);
 			return 0;
 		case VK_LEFT:
-			current.me.x -= 10;
+			tleft = true;
 			return 0;
 		case VK_RIGHT:
-			current.me.x += 10;
+			tright = true;
 			return 0;
 		case VK_UP:
-			current.me.y -= 10;
+			tup = true;
 			return 0;
 		case VK_DOWN:
-			current.me.y += 10;
+			tdown = true;
 			return 0;
 		case VK_SPACE:
 			break;
@@ -80,6 +94,28 @@ LRESULT WndProc(HWND hWnd, LPDIRECTDRAWSURFACE BackScreen, LPDIRECTDRAWSURFACE R
 		}
 		break;
 
+	case WM_KEYUP:
+		switch (wParam)
+		{
+		case VK_LEFT:
+			tleft = false;
+			lr_push = 0;
+			return 0;
+		case VK_RIGHT:
+			tright = false;
+			lr_push = 0;
+			return 0;
+		case VK_UP:
+			tup = false;
+			td_push = 0;
+			return 0;
+		case VK_DOWN:
+			tdown = false;
+			td_push = 0;
+			return 0;
+		}
+
+		break;
 	}
 
 	return DefWindowProc(hWnd, message, wParam, lParam);
@@ -89,19 +125,41 @@ LRESULT WndProc(HWND hWnd, LPDIRECTDRAWSURFACE BackScreen, LPDIRECTDRAWSURFACE R
 /************************************************************************/
 /* GameProc                                                             */
 /************************************************************************/
-void GameProc(HWND hWnd, LPDIRECTDRAWSURFACE BackScreen, LPDIRECTDRAWSURFACE RealScreen, int winWidth, int winHeight, 
+void GameProc(HWND hWnd, LPDIRECTDRAWSURFACE BackScreen, LPDIRECTDRAWSURFACE RealScreen, int winWidth, int winHeight,
 	bool fullScreen)
 {
 	// Clear Back Ground
 	RECT	BackRect = { 0, 0, winWidth, winHeight };
+	BackImage = game.get_back_image();
 	BackScreen->BltFast(0, 0, BackImage, &BackRect, DDBLTFAST_WAIT | DDBLTFAST_SRCCOLORKEY);
 
 	//////////////////////////////////////////////////////////////////////////
 
 	// Draw me
-	RECT meRect = { 0, 0, 16, 16 };
-	BackScreen->BltFast(current.me.x, current.me.y, unitImages[3], &meRect, DDBLTFAST_WAIT | DDBLTFAST_SRCCOLORKEY);
+	RECT me_rect = game.get_me_rect();
+	RECT im_rect = { 0, 0, 80, 80 };
 
+	MeImage = game.get_me_image();
+	BackScreen->Blt(&me_rect, MeImage, &im_rect, DDBLT_WAIT | DDBLT_KEYSRC, NULL);
+
+	// Draw Enemy
+	if (game.is_enemy_exist())
+	{
+
+	}
+
+	//////////////////////////////////////////////////////////////////////////
+	// TEXT
+	HDC hdc;
+	BackScreen->GetDC(&hdc);
+
+	string str = game.get_me_info();
+	TextOut(hdc, 50, 50, str.c_str(), str.size());
+	
+	str = game.get_game_info();
+	TextOut(hdc, 50, 90, str.c_str(), str.size());
+
+	BackScreen->ReleaseDC(hdc);
 	//////////////////////////////////////////////////////////////////////////
 
 	if (fullScreen)
@@ -125,14 +183,15 @@ int __stdcall WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
 	window.SetWndProc(WndProc);
 	window.Init(hInstance, hPrevInstance, lpCmdLine, nCmdShow);
 
-	loadImages();
+	game.game_init(&window);
+
+	game.load_images();
+
+	controller.set_current(game.get_current());
 
 	// [Game] ////////////////////////////////////////////////////////////////
 
-	BackImage = backgroundImages[0];
-	changeScreen(Screen::START);
-	
-	current.me.size = 1;
+	game.change_screen(Screen::GAME);
 
 	//////////////////////////////////////////////////////////////////////////
 
@@ -140,85 +199,4 @@ int __stdcall WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
 	window.MainLoop();
 
 	return TRUE;
-}
-
-/************************************************************************/
-/* Implementation                                                       */
-/************************************************************************/
-void changeScreen(Screen state)
-{
-	if (current.screen == state) {
-		// do nothing
-	}
-	else {
-		current.screen = state;
-		changeBackground(current.screen);
-	}
-}
-
-void changeBackground(Screen state)
-{
-// 	BackImage = DDLoadBitmap(window.DirectOBJ, backgroundFromEnum(state), 0, 0);
-// 	DDSetColorKey(BackImage, RGB(0, 0, 0));
-
-	BackImage = backgroundImages[state];
-}
-
-char* backgroundFromEnum(Screen state)
-{
-	switch (state)
-	{
-	case MENU:
-		return "menu.bmp";
-		break;
-	case GAME:
-		return "game.bmp";
-		break;
-	default:
-		return "back.bmp";
-		break;
-	}
-}
-
-void loadImages()
-{
-	LPDIRECTDRAWSURFACE temp;
-
-
-	int background_number = 3;		// number of backgrounds
-	char *background_files[] = {
-		"images/background/back.bmp",
-		"images/background/menu.bmp",
-		"images/background/game.bmp"
-	};
-	for (int i = 0; i < background_number; i++)
-	{
-		temp = DDLoadBitmap(window.DirectOBJ, background_files[i], 0, 0);
-		DDSetColorKey(temp, RGB(colorKey.r, colorKey.g, colorKey.b));
-		backgroundImages.push_back(temp);
-	}
-
-	int unit_number = 1;
-	int size_number = 4;
-	char* unit_files[] = {
-		"images/units/basic/"
-	};
-	char* size_files[] = {
-		"s1.bmp",
-		"s2.bmp",
-		"s3.bmp",
-		"s4.bmp"
-	};
-	for (int i = 0; i < unit_number; i++)
-	{
-		for (int j = 0; j < size_number; j++)
-		{
-			string str(unit_files[i]);
-			str += size_files[j];
-
-			temp = DDLoadBitmap(window.DirectOBJ, str.c_str(), 0, 0);
-			DDSetColorKey(temp, RGB(colorKey.r, colorKey.g, colorKey.b));
-			unitImages.push_back(temp);
-		}
-	}
 }
