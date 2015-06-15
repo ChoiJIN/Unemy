@@ -151,14 +151,37 @@ BOOL CWindow::Fail(HWND hwnd, char *Output)
 	return FALSE;
 }
 
+BOOL CWindow::_InitDirectSound(void)
+{
+	if (DirectSoundCreate(NULL, &SoundOBJ, NULL) == DS_OK)
+	{
+		if (SoundOBJ->SetCooperativeLevel(hWnd, DSSCL_PRIORITY) != DS_OK) return FALSE;
+
+		memset(&DSB_desc, 0, sizeof(DSBUFFERDESC));
+		DSB_desc.dwSize = sizeof(DSBUFFERDESC);
+		DSB_desc.dwFlags = DSBCAPS_PRIMARYBUFFER;
+
+		if (SoundOBJ->CreateSoundBuffer(&DSB_desc, &SoundDSB, NULL) != DS_OK) return FALSE;
+		SoundDSB->SetVolume(0);
+		SoundDSB->SetPan(0);
+		return TRUE;
+	}
+	return FALSE;
+}
+
 void CWindow::Init(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _In_ LPSTR lpCmdLine, _In_ int nCmdShow)
 {
-	bool result_mode;
 	//if (!) result_mode = false;
-	GameMode(hInstance, nCmdShow, winWidth, winHeight, 32, 0);
+	GameMode(hInstance, nCmdShow, width, height, 32, 0);
 
 	// Set tick frequency (20ms per frame = 50 fps)
 	SetTimer(hWnd, 1, 20, NULL);
+
+	if (!_InitDirectSound())
+	{
+		// SOUND FAIL
+		exit(1);
+	}
 
 	return;
 }
@@ -195,5 +218,5 @@ LRESULT	CALLBACK CWindow::StaticWndProc(HWND hWnd, UINT message, WPARAM wParam, 
 
 LRESULT CWindow::WndProc(UINT message, WPARAM wParam, LPARAM lParam)
 {
-	return pWndProc(hWnd, BackScreen, RealScreen, winWidth, winHeight, message, wParam, lParam);
+	return pWndProc(hWnd, BackScreen, RealScreen, width, height, message, wParam, lParam);
 }

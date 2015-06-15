@@ -15,6 +15,13 @@ struct Player {
 	double vx, vy;
 	double ax, ay;
 	PlayerState state;
+
+	bool operator==(const Player& p)
+	{
+		return (size == p.size) &&
+			(x == p.x) && (y == p.y) &&
+			(vx == p.vx) && (vy == p.vy);
+	}
 };
 
 struct Current {
@@ -26,8 +33,8 @@ struct Current {
 };
 
 const double GRAVITY_COEF = 9.81;
-const int PUSH_FORCE = 2500;
+const int PUSH_FORCE = 6400;
 const double DRAG_COEF = 0.1;
-const double MAX_VELOCITY = 50;
+const double MAX_VELOCITY = 100;
 const double DELTA_TIME = 0.02;
 const int SIZE_NUMBER = 8;

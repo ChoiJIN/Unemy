@@ -3,11 +3,10 @@
 #include <vector>
 #include <string>
 
+#include "Game.h"
 #include "CWindow.h"
-
 #include "GameState.h"
 #include "Controller.h"
-#include "Game.h"
 
 using namespace std;
 
@@ -21,13 +20,7 @@ Controller controller;
 Game game;
 
 LPDIRECTDRAWSURFACE BackImage;
-LPDIRECTDRAWSURFACE MeImage;
-
-/************************************************************************/
-/* Resources                                                            */
-/************************************************************************/
-// vector<LPDIRECTDRAWSURFACE> backgroundImages;
-// vector<LPDIRECTDRAWSURFACE> unitImages;
+LPDIRECTDRAWSURFACE UnitImage;
 
 /************************************************************************/
 /* WndProc                                                              */
@@ -45,7 +38,6 @@ LRESULT WndProc(HWND hWnd, LPDIRECTDRAWSURFACE BackScreen, LPDIRECTDRAWSURFACE R
 	case WM_MOUSEMOVE:
 		break;
 	case WM_LBUTTONDOWN:
-		game.change_screen(Screen::GAME);
 		break;
 	case WM_DESTROY:
 		window.ReleaseAll();
@@ -53,6 +45,8 @@ LRESULT WndProc(HWND hWnd, LPDIRECTDRAWSURFACE BackScreen, LPDIRECTDRAWSURFACE R
 		break;
 
 	case WM_TIMER:
+		game.elapse();
+
 		if (tleft)
 			controller.push(Controller::LEFT, lr_push += DELTA_PUSH);
 		else if (tright)
@@ -64,6 +58,14 @@ LRESULT WndProc(HWND hWnd, LPDIRECTDRAWSURFACE BackScreen, LPDIRECTDRAWSURFACE R
 			controller.push(Controller::DOWN, td_push += DELTA_PUSH);
 
 		game.me_calculation();
+		game.enemy_calculation();
+
+		game.collision_detect();
+
+		if (game.is_make_enemy_time())
+		{
+			game.make_enemy();
+		}
 
 		window.pGameProc(hWnd, BackScreen, RealScreen, winWidth, winHeight, false);
 		break;
@@ -139,13 +141,19 @@ void GameProc(HWND hWnd, LPDIRECTDRAWSURFACE BackScreen, LPDIRECTDRAWSURFACE Rea
 	RECT me_rect = game.get_me_rect();
 	RECT im_rect = { 0, 0, 80, 80 };
 
-	MeImage = game.get_me_image();
-	BackScreen->Blt(&me_rect, MeImage, &im_rect, DDBLT_WAIT | DDBLT_KEYSRC, NULL);
+	UnitImage = game.get_me_image();
+	if (game.is_alive())
+		BackScreen->Blt(&me_rect, UnitImage, &im_rect, DDBLT_WAIT | DDBLT_KEYSRC, NULL);
 
 	// Draw Enemy
 	if (game.is_enemy_exist())
 	{
-
+		int number = game.get_player_number();
+		for (int i = 0; i < number; i++)
+		{
+			RECT enemy_rect = game.get_player_rect(i);
+			BackScreen->Blt(&enemy_rect, UnitImage, &im_rect, DDBLT_WAIT | DDBLT_KEYSRC, NULL);
+		}
 	}
 
 	//////////////////////////////////////////////////////////////////////////
@@ -185,13 +193,17 @@ int __stdcall WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
 
 	game.game_init(&window);
 
-	game.load_images();
+	game.load_resources();
+
+	game.play_bgm(0);
 
 	controller.set_current(game.get_current());
 
 	// [Game] ////////////////////////////////////////////////////////////////
 
 	game.change_screen(Screen::GAME);
+
+	game.make_enemy();
 
 	//////////////////////////////////////////////////////////////////////////
 
