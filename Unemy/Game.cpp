@@ -16,8 +16,8 @@ void Game::game_init(CWindow* window)
 {
 	set_cwindow(window);
 
-	current.me.state = ALIVE;
-	current.me.size = 70;
+	current.me.state = PlayerState::ALIVE;
+	current.me.size = 10;
 	current.me.x = 200;
 	current.me.y = 200;
 }
@@ -28,9 +28,9 @@ void Game::load_resources()
 
 	int background_number = 3;		// number of backgrounds
 	char *background_files[] = {
-		"images/background/back.bmp",
-		"images/background/menu.bmp",
-		"images/background/universe.bmp"
+		"images/background/universe.bmp",
+		"images/background/win.bmp",
+		"images/background/dead.bmp"
 	};
 	for (int i = 0; i < background_number; i++)
 	{
@@ -40,16 +40,13 @@ void Game::load_resources()
 	}
 
 	int unit_number = 1;
-	int size_number = 5;
+	int size_number = 2;
 	char* unit_files[] = {
 		"images/units/basic/"
 	};
 	char* size_files[] = {
-		"s1.bmp",
-		"s2.bmp",
-		"s3.bmp",
-		"s4.bmp",
-		"test.bmp"
+		"me.bmp",
+		"enemy.bmp"
 	};
 	for (int i = 0; i < unit_number; i++)
 	{
@@ -106,7 +103,7 @@ void Game::elapse()
 	}
 }
 
-void Game::change_screen(Screen state)
+void Game::change_screen(Screen::Enum state)
 {
 	if (current.screen == state) {
 		// do nothing
@@ -117,7 +114,7 @@ void Game::change_screen(Screen state)
 	}
 }
 
-void Game::change_background(Screen state)
+void Game::change_background(Screen::Enum state)
 {
 	BackImage = background_images[state];
 }
@@ -176,7 +173,7 @@ void Game::play_bgm(int number)
 
 bool Game::is_alive()
 {
-	return current.me.state == ALIVE;
+	return current.me.state == PlayerState::ALIVE;
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -186,9 +183,9 @@ bool Game::is_enemy_exist()
 	return !current.players.empty();
 }
 
-bool Game::is_make_enemy_time()
+bool Game::is_enemy_time()
 {
-	if (global_count % 150 == 0)
+	if (global_count % enemy_make_time == 0)
 		return true;
 	else
 		return false;
@@ -197,7 +194,10 @@ bool Game::is_make_enemy_time()
 void Game::make_enemy()
 {
 	srand((unsigned int)time((time_t)NULL));
-	int size = rand() % 40;
+	int size = 0;
+	while (size == 0){
+		size = rand() % 30 + 10;
+	}
 	int x = rand() % window->width;
 	int y = rand() % window->height;
 	Player new_player = { size, x, y };
@@ -225,7 +225,10 @@ void Game::core_calculation(Player& p)
 			p.vy -= GRAVITY_COEF*DRAG_COEF*(abs(p.vy) / p.vy) * p.size;
 	}
 
-	int max_velocity = (int)((SIZE_NUMBER * 10 / p.size) * MAX_VELOCITY);
+	if (p.size == 0) return;
+
+	double max_velocity = ((SIZE_NUMBER) * MAX_VELOCITY);
+	//double max_velocity = 10*sqrt((SIZE_NUMBER * 10.0 - p.size + 10));
 	//int max_velocity = MAX_VELOCITY - p.size;
 	if (abs(p.vx) > max_velocity)
 		p.vx = max_velocity * (abs(p.vx) / p.vx);
@@ -273,25 +276,33 @@ void Game::consume(Player p)
 
 void Game::kill_me()
 {
-	current.me.state = DEAD;
+	current.me.state = PlayerState::DEAD;
+	game_over();
 }
 
 void Game::revive_me()
 {
 	int offset = 30;
-	current.me.state = ALIVE;
+	current.me.state = PlayerState::ALIVE;
 	current.me.size = 10;
 	current.me.x = rand() % (window->width - offset) + offset;
 	current.me.y = rand() % (window->height - offset) + offset;
 
 	win_count = 0;
+
+	change_screen(Screen::GAME);
 }
 
 void Game::game_over()
 {
-	if (current.me.state == ALIVE && current.me.size == UNI_MAX_SIZE)
+	if (current.me.state == PlayerState::ALIVE && current.me.size == UNI_MAX_SIZE)
 	{
-		std::this_thread::sleep_for(chrono::seconds(1));
+		//std::this_thread::sleep_for(chrono::seconds(1));
+		change_screen(Screen::WIN);
+	}
+	if (current.me.state == PlayerState::DEAD)
+	{
+		change_screen(Screen::DEAD);
 	}
 }
 
@@ -307,9 +318,14 @@ LPDIRECTDRAWSURFACE Game::get_back_image()
 	return BackImage;
 }
 
+LPDIRECTDRAWSURFACE Game::get_enemy_image()
+{
+	return unit_images[1];
+}
+
 LPDIRECTDRAWSURFACE Game::get_me_image()
 {
-	return unit_images[4];
+	return unit_images[0];
 }
 
 RECT Game::get_me_rect()
@@ -365,9 +381,9 @@ std::string Game::get_me_info()
 	str += ")";
 	str += "  ";
 	str += "velocity: (";
-	str += to_string(current.me.vx);
+	str += to_string(current.me.vx*DELTA_TIME);
 	str += ", ";
-	str += to_string(current.me.vy);
+	str += to_string(current.me.vy*DELTA_TIME);
 	str += ")";
 	str += "  ";
 	str += "size: (";
@@ -382,6 +398,7 @@ std::string Game::get_game_info()
 	string str = "number: ";
 	str += to_string(current.players.size());
 	str += "  ";
+	str += "count before win: ";
 	str += to_string(win_count);
 
 	return str;

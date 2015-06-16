@@ -1,12 +1,16 @@
 //#include <windows.h>
+#define _CRT_SECURE_NO_WARNINGS
 #include <iostream>
 #include <vector>
 #include <string>
+
+#include "_client.h"
 
 #include "Game.h"
 #include "CWindow.h"
 #include "GameState.h"
 #include "Controller.h"
+
 
 using namespace std;
 
@@ -14,6 +18,9 @@ using namespace std;
 /* Global Variable                                                      */
 /************************************************************************/
 CWindow window;
+
+// Network
+_client* client;
 
 //Current current;
 Controller controller;
@@ -29,6 +36,25 @@ LPDIRECTDRAWSURFACE UnitImage;
 bool tup, tdown, tleft, tright;
 double lr_push, td_push;
 double DELTA_PUSH = 0.02;
+
+void send_me()
+{
+	RECT pos = game.get_me_rect();
+	int size = (pos.right - pos.left)/2;
+	int x = pos.left;
+	int y = pos.top;
+
+	char tr[512];
+	_message msg;
+	sprintf(msg.data(), "%02d", 0);
+	sprintf(msg.data() + _message::length_length, "%04d", 10);
+	sprintf(tr, "%02d%04d%04d", size, x, y);
+
+	msg.set_body(tr);
+	msg.encode_header(strlen(tr), 1);
+
+	client->write(msg);
+}
 
 LRESULT WndProc(HWND hWnd, LPDIRECTDRAWSURFACE BackScreen, LPDIRECTDRAWSURFACE RealScreen, int winWidth, int winHeight,
 	UINT message, WPARAM wParam, LPARAM lParam)
@@ -60,9 +86,12 @@ LRESULT WndProc(HWND hWnd, LPDIRECTDRAWSURFACE BackScreen, LPDIRECTDRAWSURFACE R
 		game.me_calculation();
 		game.enemy_calculation();
 
+		send_me();
+		//recieve_enemies();
+
 		game.collision_detect();
 
-		if (game.is_make_enemy_time())
+		if (game.is_enemy_time())
 		{
 			game.make_enemy();
 		}
@@ -139,13 +168,14 @@ void GameProc(HWND hWnd, LPDIRECTDRAWSURFACE BackScreen, LPDIRECTDRAWSURFACE Rea
 
 	// Draw me
 	RECT me_rect = game.get_me_rect();
-	RECT im_rect = { 0, 0, 80, 80 };
+	RECT im_rect = { 0, 0, 640, 640 };
 
 	UnitImage = game.get_me_image();
 	if (game.is_alive())
 		BackScreen->Blt(&me_rect, UnitImage, &im_rect, DDBLT_WAIT | DDBLT_KEYSRC, NULL);
 
 	// Draw Enemy
+	UnitImage = game.get_enemy_image();
 	if (game.is_enemy_exist())
 	{
 		int number = game.get_player_number();
@@ -163,7 +193,7 @@ void GameProc(HWND hWnd, LPDIRECTDRAWSURFACE BackScreen, LPDIRECTDRAWSURFACE Rea
 
 	string str = game.get_me_info();
 	TextOut(hdc, 50, 50, str.c_str(), str.size());
-	
+
 	str = game.get_game_info();
 	TextOut(hdc, 50, 90, str.c_str(), str.size());
 
@@ -191,15 +221,31 @@ int __stdcall WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
 	window.SetWndProc(WndProc);
 	window.Init(hInstance, hPrevInstance, lpCmdLine, nCmdShow);
 
+	// [Network] /////////////////////////////////////////////////////////////
+	const char ip[] = "127.0.0.1";
+	const char port[] = "5166";
+
+	boost::asio::io_service io_service;
+
+	tcp::resolver resolver(io_service);
+	tcp::resolver::query query(ip, port);
+	tcp::resolver::iterator iterator = resolver.resolve(query);
+
+	client = new _client(io_service, iterator);
+
+	boost::thread t(boost::bind(&boost::asio::io_service::run, &io_service));
+
+	//////////////////////////////////////////////////////////////////////////
+
 	game.game_init(&window);
 
 	game.load_resources();
 
 	game.play_bgm(0);
 
-	controller.set_current(game.get_current());
-
 	// [Game] ////////////////////////////////////////////////////////////////
+
+	controller.set_current(game.get_current());
 
 	game.change_screen(Screen::GAME);
 

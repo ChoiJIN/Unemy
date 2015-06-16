@@ -175,7 +175,7 @@ void CWindow::Init(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _
 	GameMode(hInstance, nCmdShow, width, height, 32, 0);
 
 	// Set tick frequency (20ms per frame = 50 fps)
-	SetTimer(hWnd, 1, 20, NULL);
+	SetTimer(hWnd, render_time, render_time, NULL);
 
 	if (!_InitDirectSound())
 	{

@@ -1,20 +1,26 @@
 #pragma once
 #include <vector>
 
-enum Screen {
-	START, MENU, GAME, NETWORK
-};
+namespace Screen
+{
+	enum Enum {
+		GAME, WIN, DEAD, NONE
+	};
+}
 
-enum PlayerState {
-	ALIVE, DEAD
-};
+namespace PlayerState
+{
+	enum Enum {
+		ALIVE, DEAD
+	};
+}
 
 struct Player {
 	int size;
 	int x, y;
 	double vx, vy;
 	double ax, ay;
-	PlayerState state;
+	PlayerState::Enum state;
 
 	bool operator==(const Player& p)
 	{
@@ -25,7 +31,7 @@ struct Player {
 };
 
 struct Current {
-	Screen screen;
+	Screen::Enum screen = Screen::NONE;
 	
 	int number;			// 나를 제외한 플레이어 수
 	std::vector<Player> players;
@@ -35,6 +41,6 @@ struct Current {
 const double GRAVITY_COEF = 9.81;
 const int PUSH_FORCE = 6400;
 const double DRAG_COEF = 0.1;
-const double MAX_VELOCITY = 100;
+const double MAX_VELOCITY = 80;
 const double DELTA_TIME = 0.02;
 const int SIZE_NUMBER = 8;

@@ -37,6 +37,8 @@ private:
 
 	const int UNI_MAX_SIZE = 80;
 
+	const int enemy_make_time = 100;
+
 
 public:
 	Game();
@@ -49,8 +51,8 @@ public:
 	//////////////////////////////////////////////////////////////////////////
 	// GAME - PLAY
 	void elapse();
-	void change_screen(Screen state);
-	void change_background(Screen state);
+	void change_screen(Screen::Enum state);
+	void change_background(Screen::Enum state);
 	void me_calculation();
 	void enemy_calculation();
 	void collision_detect();
@@ -58,7 +60,7 @@ public:
 	bool is_alive();
 	// GAME - ENEMY
 	bool is_enemy_exist();
-	bool is_make_enemy_time();
+	bool is_enemy_time();
 	void make_enemy();
 
 private:
@@ -83,7 +85,7 @@ public:
 	Current* get_current();
 	LPDIRECTDRAWSURFACE get_back_image();
 	LPDIRECTDRAWSURFACE get_me_image();
-
+	LPDIRECTDRAWSURFACE get_enemy_image();
 	RECT get_me_rect();
 	RECT get_player_rect(int);
 	int get_player_number();

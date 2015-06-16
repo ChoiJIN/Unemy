@@ -25,6 +25,7 @@ void Controller::push(Direction direction, double push_ratio)
 	// 가속도 계산
 	if (push_ratio > 1)
 		push_ratio = 1.0;
+
 	double accelDelta = calc_accel()*push_ratio;
 	switch (direction)
 	{
@@ -43,7 +44,7 @@ void Controller::push(Direction direction, double push_ratio)
 	default:
 		break;
 	}
-	//current->me.ax = 10.0;
+
 	// 가속도로 속도 계산
 	current->me.vx += current->me.ax;
 	current->me.vy += current->me.ay;

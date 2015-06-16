@@ -33,7 +33,8 @@ public:
 
 	// Window size
 	const int width = 1200;
-	const int height = 600;
+	const int height = 800;
+	const int render_time = 20;
 
 private:
 	HWND hWnd;
