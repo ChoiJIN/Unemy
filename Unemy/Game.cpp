@@ -400,6 +400,7 @@ std::string Game::get_game_info()
 	str += "  ";
 	str += "count before win: ";
 	str += to_string(win_count);
+	str += " / 1000";
 
 	return str;
 }

@@ -21,12 +21,11 @@ struct Player {
 	double vx, vy;
 	double ax, ay;
 	PlayerState::Enum state;
+	int id;
 
 	bool operator==(const Player& p)
 	{
-		return (size == p.size) &&
-			(x == p.x) && (y == p.y) &&
-			(vx == p.vx) && (vy == p.vy);
+		return (id == p.id) && (size == p.size) && (x == p.x) && (y == p.y);
 	}
 };
 

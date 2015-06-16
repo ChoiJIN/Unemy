@@ -36,7 +36,7 @@ public:
 		size += "d";
 		char lc[length_length + 1] = "";
 		sprintf(lc, size.c_str(), length);
-		memcpy(data(), lc, length_);
+		memcpy(data(), lc, length_length);
 
 		size = "";
 		size += "%0";
@@ -44,7 +44,7 @@ public:
 		size += "d";
 		char ic[id_length + 1] = "";
 		sprintf(ic, size.c_str(), id);
-		memcpy(data() + length_length, ic, strlen(ic));
+		memcpy(data() + length_length, ic, id_length);
 	}
 
 	void decode_header()
@@ -78,6 +78,11 @@ public:
 	{
 		return length_;
 	}
+
+	int get__body_length()
+	{
+		return length_ - header_length;
+	}
 	
 	int set_length(int length)
 	{
@@ -94,7 +99,29 @@ public:
 		this->id_ = id;
 	}
 
-private:
+	int get_size()
+	{
+		char sc[3] = "";
+		memcpy(sc, body(), 2);
+		int size = atoi(sc);
+		return size;
+	}
+
+	int get_x()
+	{
+		char xc[5] = "";
+		memcpy(xc, body() + 2, 4);
+		int x = atoi(xc);
+		return x;
+	}
+
+	int get_y()
+	{
+		char yc[5] = "";
+		memcpy(yc, body() + 6, 4);
+		int y = atoi(yc);
+		return y;
+	}
 
 private:
 	char data_[max_lenght];

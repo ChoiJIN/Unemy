@@ -2,6 +2,8 @@
 
 #include <iostream>
 #include <deque>
+#include <algorithm>
+#include <vector>
 
 #ifndef _WIN32_WINNT         
 #define _WIN32_WINNT 0x0500    // 윈도우 2000 이상 지원
@@ -47,7 +49,22 @@ private:
 
 	//////////////////////////////////////////////////////////////////////////
 
+	void parsing_player(_message msg);
 
+
+public:
+	struct Player {
+		int id;
+		int size;
+		int x, y;
+
+		bool operator== (const Player& p)
+		{
+			return (id == p.id);
+		}
+	};
+	vector<Player> players;
+	_message read_msg_;
 
 private:
 	boost::asio::io_service& io_service_;
@@ -55,6 +72,6 @@ private:
 
 	deque<_message> write_msgs_;
 
-	_message read_msg_;
+
 };
 

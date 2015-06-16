@@ -32,6 +32,7 @@ void _client::handle_read_body(const boost::system::error_code& error)
 {
 	if (!error)
 	{
+		parsing_player(read_msg_);
 		std::cout.write(read_msg_.body(), read_msg_.get_length());
 		std::cout << "\n";
 		boost::asio::async_read(socket_,
@@ -64,6 +65,31 @@ void _client::handle_write(const boost::system::error_code& error)
 		do_close();
 	}
 }
+
+
+void _client::parsing_player(_message msg)
+{
+	int id = msg.get_id();
+	int size = msg.get_size();
+	int x = msg.get_x();
+	int y = msg.get_y();
+
+	Player p = { id, size, x, y };
+
+	auto i = find(players.begin(), players.end(), p);
+
+	if (i != players.end())
+	{
+		(*i).size = size;
+		(*i).x = x;
+		(*i).y = y;
+	}
+	else
+	{
+		players.push_back(p);
+	}
+}
+
 
 //////////////////////////////////////////////////////////////////////////
 void _client::write(const _message& msg)

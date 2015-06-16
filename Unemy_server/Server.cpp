@@ -1,6 +1,6 @@
 #define _CRT_SECURE_NO_WARNINGS
 #include <iostream>
-#include <vector>
+#include <set>
 #include <deque>
 #include <string>
 
@@ -44,7 +44,7 @@ class _room
 public:
 	void join(_participant_ptr participant)
 	{
-		participants_.push_back(participant);
+		participants_.insert(participant);
 		join_count++;
 
 		cout << participant->id_ << " 님이 접속하였습니다." << endl;
@@ -70,7 +70,7 @@ public:
 	}
 
 private:
-	vector<_participant_ptr> participants_;
+	set<_participant_ptr> participants_;
 
 	int join_count = 1;
 };
@@ -99,7 +99,7 @@ public:
 		room_.join(shared_from_this());
 
 		boost::asio::async_read(socket_,
-			boost::asio::buffer(read_msg_.data(), read_msg_.get_length()),
+			boost::asio::buffer(read_msg_.data(), _message::header_length),
 			boost::bind(&_session::handle_read_header, shared_from_this(),
 			boost::asio::placeholders::error));
 	}
@@ -110,7 +110,7 @@ public:
 		{
 			read_msg_.decode_header();
 			async_read(socket_,
-				boost::asio::buffer(read_msg_.data(), _message::header_length),
+				boost::asio::buffer(read_msg_.body(), read_msg_.get_body_length()),
 				boost::bind(&_session::handle_read_body, shared_from_this(),
 				boost::asio::placeholders::error));
 		}
@@ -124,10 +124,11 @@ public:
 			read_msg_.set_id(id_);
 			room_.deliver(read_msg_);
 
-			cout.write(read_msg_.body(), read_msg_.get_length());
+			cout << id_ << ": ";
+			cout.write(read_msg_.body(), read_msg_.get_body_length()) << endl;
 
 			async_read(socket_,
-				boost::asio::buffer(read_msg_.data(), read_msg_.get_length()),
+				boost::asio::buffer(read_msg_.data(), _message::header_length),
 				boost::bind(&_session::handle_read_header, shared_from_this(),
 				boost::asio::placeholders::error));
 		}
@@ -141,7 +142,7 @@ public:
 			if (!write_msgs_.empty())
 			{
 				boost::asio::async_write(socket_,
-					boost::asio::buffer(write_msgs_.front().data(), write_msgs_.front().get_length()),
+					boost::asio::buffer(write_msgs_.front().data(), write_msgs_.front().get_body_length()),
 					boost::bind(&_session::handle_write, shared_from_this(),
 					boost::asio::placeholders::error));
 			}
@@ -157,7 +158,7 @@ public:
 		if (!write_in_progress)
 		{
 			boost::asio::async_write(socket_,
-				boost::asio::buffer(write_msgs_.front().data(), write_msgs_.front().get_length()),
+				boost::asio::buffer(write_msgs_.front().data(), write_msgs_.front().get_body_length()),
 				boost::bind(&_session::handle_write, shared_from_this(),
 				boost::asio::placeholders::error));
 		}

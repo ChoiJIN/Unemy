@@ -51,9 +51,36 @@ void send_me()
 	sprintf(tr, "%02d%04d%04d", size, x, y);
 
 	msg.set_body(tr);
-	msg.encode_header(strlen(tr), 1);
+	msg.encode_header(strlen(tr)+_message::header_length, 1);
 
 	client->write(msg);
+}
+
+void receive_enemies()
+{
+	//vector<_client::Player>& players = client->players;
+	vector<Player>& players = game.get_current()->players;
+
+	for each(_client::Player p in client->players)
+	{
+		Player newp;
+		newp.id = p.id;
+		newp.x = p.x;
+		newp.y = p.y;
+		newp.size = p.size;
+		auto i = find(players.begin(), players.end(), newp);
+
+		if (i != players.end())
+		{
+			(*i).size = newp.size;
+			(*i).x = newp.x;
+			(*i).y = newp.y;
+		}
+		else
+		{
+			players.push_back(newp);
+		}
+	}
 }
 
 LRESULT WndProc(HWND hWnd, LPDIRECTDRAWSURFACE BackScreen, LPDIRECTDRAWSURFACE RealScreen, int winWidth, int winHeight,
@@ -87,7 +114,7 @@ LRESULT WndProc(HWND hWnd, LPDIRECTDRAWSURFACE BackScreen, LPDIRECTDRAWSURFACE R
 		game.enemy_calculation();
 
 		send_me();
-		//recieve_enemies();
+		//receive_enemies();
 
 		game.collision_detect();
 

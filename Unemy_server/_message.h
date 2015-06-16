@@ -51,12 +51,12 @@ public:
 		// decode length
 		char length[length_length + 1] = "";
 		memcpy(length, data(), length_length);
-		this->length_ = atoi(length);
+		set_length(atoi(length));
 
 		// decode id
 		char id[id_length + 1] = "";
 		memcpy(id, data()+length_length, id_length);
-		this->id_ = atoi(id);
+		set_id(atoi(id));
 	}
 
 	char* body()
@@ -71,13 +71,16 @@ public:
 		memcpy(body(), msg, length);
 	}
 
-	int get_length()
+	int get_body_length()
 	{
-		return length_;
+		return length_-header_length;
 	}
 	
-	int set_length(int length)
+	void set_length(int length)
 	{
+		if (length > max_lenght)
+			length = max_lenght;
+
 		this->length_ = length;
 	}
 
